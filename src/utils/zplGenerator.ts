@@ -1,62 +1,165 @@
 /**
  * ZPL (Zebra Programming Language) generator for asset tag labels
+ * Configuration is loaded from label-config.json - see that file to adjust label layout
  * Label dimensions: 1.5" x 0.5" (304 x 102 dots at 203 DPI)
  */
+
+import path from 'path';
+import fs from 'fs';
+import { app } from 'electron';
 
 export interface LabelData {
     assetTag: string;
     serialNumber?: string;
 }
 
+interface LabelConfig {
+    labelDimensions: {
+        width: number;
+        height: number;
+    };
+    elements: {
+        serialNumber: {
+            enabled: boolean;
+            position: { x: number; y: number };
+            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
+            font: { family: string; height: number; width: number };
+            rotation: number;
+        };
+        heading: {
+            text: string;
+            position: { x: number; y: number };
+            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
+            font: { family: string; height: number; width: number };
+            rotation: number;
+        };
+        barcode: {
+            type: string;
+            position: { x: number; y: number };
+            fieldBlock: { width: number; height: number };
+            height: number;
+            printHumanReadable: boolean;
+        };
+        assetTagLabel: {
+            position: { x: number; y: number };
+            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
+            font: { family: string; height: number; width: number };
+            rotation: number;
+        };
+    };
+}
+
+let cachedConfig: LabelConfig | null = null;
+
+/**
+ * Load label configuration from label-config.json
+ * Handles both development and packaged exe scenarios
+ */
+function loadLabelConfig(): LabelConfig {
+    if (cachedConfig) return cachedConfig;
+
+    const appPath = app.getAppPath();
+    const resourcesPath = process.resourcesPath;
+
+    // Try multiple paths to find label-config.json
+    const paths = [
+        path.join(appPath, 'label-config.json'),           // App root (packaged exe)
+        path.join(appPath, 'dist/label-config.json'),      // Development dist folder
+        path.join(resourcesPath || '', 'label-config.json'), // electron-builder resources
+        path.join(resourcesPath || '', 'dist/label-config.json'),
+    ].filter(p => p.length > 0); // Remove empty paths
+
+    for (const configPath of paths) {
+        try {
+            if (fs.existsSync(configPath)) {
+                const content = fs.readFileSync(configPath, 'utf-8');
+                cachedConfig = JSON.parse(content);
+                console.log(`✓ Loaded label config from: ${configPath}`);
+                return cachedConfig;
+            }
+        } catch (err) {
+            console.error(`Could not load config from ${configPath}:`, err);
+        }
+    }
+
+    // If all paths fail, throw error with debug info
+    console.error('Label config search paths:', paths);
+    console.error('app.getAppPath():', appPath);
+    console.error('process.resourcesPath:', resourcesPath);
+    throw new Error(`label-config.json not found in any expected location`);
+}
+
 /**
  * Generate ZPL commands for a Zebra printer label
- * Label layout:
- * - Serial number (if present) rotated 90° on left side
- * - "Property of DHL" heading at top
- * - Barcode (Code 128C) of asset tag
- * - Human readable asset tag number at bottom
+ * Configuration is parameter-driven from label-config.json
+ * Uses Field Block (^FB) for perfect text centering
  */
 export function generateZPL(data: LabelData): string {
     const { assetTag, serialNumber } = data;
-
-    // Label size in dots (203 DPI): 1.5" x 0.5"
-    const labelWidth = 304;
-    const labelHeight = 102;
+    const config = loadLabelConfig();
+    const { labelDimensions, elements } = config;
 
     let zpl = '^XA\n'; // Start format
-    zpl += '^LL102\n'; // Label length 102 dots (0.5")
-    zpl += '^PW304\n'; // Label width 304 dots (1.5")
+    zpl += `^LL${labelDimensions.height}\n`; // Label length
+    zpl += `^PW${labelDimensions.width}\n`; // Label width
 
-    // If serial number present, add it rotated 90° on the left side (centered vertically)
-    if (serialNumber && serialNumber.trim()) {
-        // Serial number rotated 90° (rotation 2 = 90°), centered vertically
-        zpl += '^FO10,51\n'; // Field origin left side, vertically centered
-        zpl += '^A0R,30,22\n'; // Font A, rotation 2 (90°), height 30, width 22
-        zpl += '^TA\n'; // Center align
+    // Serial number (if enabled and present)
+    if (elements.serialNumber.enabled && serialNumber && serialNumber.trim()) {
+        const sn = elements.serialNumber;
+        const rotChar = getRotationChar(sn.rotation);
+        const fb = sn.fieldBlock;
+
+        zpl += `^FO${sn.position.x},${sn.position.y}\n`;
+        zpl += `^FB${fb.width},${fb.height},${fb.maxLines},${fb.alignment},${fb.overflow}\n`;
+        zpl += `^${sn.font.family}0${rotChar},${sn.font.height},${sn.font.width}\n`;
         zpl += `^FD${serialNumber}^FS\n`;
     }
 
-    // "Property of DHL" heading at top (centered)
-    zpl += '^FO152,5\n'; // Field origin centered horizontally
-    zpl += '^TA\n'; // Center align
-    zpl += '^A0N,16,14\n'; // Normal font, height 16, width 14
-    zpl += '^FDProperty of DHL^FS\n';
+    // Heading
+    const heading = elements.heading;
+    const headingRotChar = getRotationChar(heading.rotation);
+    const headingFb = heading.fieldBlock;
 
-    // Code 128C barcode of asset tag (centered)
-    zpl += '^FO152,24\n'; // Field origin centered horizontally
-    zpl += '^TA\n'; // Center align
-    zpl += `^B1C,Y,50,Y,Y\n`; // Code 128C barcode, height 50, print human readable
+    zpl += `^FO${heading.position.x},${heading.position.y}\n`;
+    zpl += `^FB${headingFb.width},${headingFb.height},${headingFb.maxLines},${headingFb.alignment},${headingFb.overflow}\n`;
+    zpl += `^${heading.font.family}0${headingRotChar},${heading.font.height},${heading.font.width}\n`;
+    zpl += `^FD${heading.text}^FS\n`;
+
+    // Barcode - Note: Field Block with barcode needs special handling
+    // Some printers support ^FB with barcodes, others don't - we'll position the barcode directly
+    const barcode = elements.barcode;
+    const barcodeBlockWidth = barcode.fieldBlock.width;
+    // Center the barcode field origin: left edge + (block width / 2)
+    const barcodeCenterX = barcode.position.x + (barcodeBlockWidth / 2);
+
+    zpl += `^FO${Math.round(barcodeCenterX)},${barcode.position.y}\n`;
+    // For barcode, use TA (center align) since ^FB with barcodes may not work on all printers
+    zpl += '^TA\n';
+    const hrChar = barcode.printHumanReadable ? 'Y' : 'N';
+    zpl += `^${barcode.type},Y,${barcode.height},Y,${hrChar}\n`;
     zpl += `^FD${assetTag}^FS\n`;
 
-    // Human readable asset tag number below barcode (centered)
-    zpl += '^FO152,78\n'; // Field origin centered horizontally
-    zpl += '^TA\n'; // Center align
-    zpl += '^A0N,14,12\n'; // Smaller font for legend
+    // Asset tag label below barcode
+    const tagLabel = elements.assetTagLabel;
+    const tagRotChar = getRotationChar(tagLabel.rotation);
+    const tagFb = tagLabel.fieldBlock;
+
+    zpl += `^FO${tagLabel.position.x},${tagLabel.position.y}\n`;
+    zpl += `^FB${tagFb.width},${tagFb.height},${tagFb.maxLines},${tagFb.alignment},${tagFb.overflow}\n`;
+    zpl += `^${tagLabel.font.family}0${tagRotChar},${tagLabel.font.height},${tagLabel.font.width}\n`;
     zpl += `^FD${assetTag}^FS\n`;
 
     zpl += '^XZ\n'; // End format
 
     return zpl;
+}
+
+/**
+ * Convert rotation angle (0, 1, 2, 3) to ZPL rotation character
+ */
+function getRotationChar(rotation: number): string {
+    const chars = ['N', 'R', 'I', 'B']; // N=0°, R=90°, I=180°, B=270°
+    return chars[rotation % 4] || 'N';
 }
 
 /**

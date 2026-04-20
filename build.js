@@ -90,6 +90,12 @@ async function build() {
             console.log('✓ Printers config copied');
         }
 
+        // Copy label-config.json
+        if (fs.existsSync('src/label-config.json')) {
+            fs.copyFileSync('src/label-config.json', 'dist/label-config.json');
+            console.log('✓ Label config copied');
+        }
+
         console.log('\n✓ Build complete!');
     } catch (error) {
         console.error('Build failed:', error);
