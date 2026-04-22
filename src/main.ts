@@ -15,12 +15,46 @@ interface AppPreferences {
     labelConfigPath?: string;
 }
 
+interface AppDefaults {
+    lastSelectedConfigName?: string;
+    lastSelectedPrinterName?: string;
+}
+
 let mainWindow: BrowserWindow | null = null;
 let preferencesWindow: BrowserWindow | null = null;
 
 // Get preferences file path (stored in userData, outside app bundle)
 const getPreferencesFilePath = (): string => {
     return path.join(app.getPath('userData'), 'preferences.json');
+};
+
+// Get app defaults file path (stores last selected printer/config per device)
+const getAppDefaultsFilePath = (): string => {
+    return path.join(app.getPath('userData'), 'app-defaults.json');
+};
+
+// Load app defaults from userData
+const loadAppDefaults = (): AppDefaults => {
+    const defaultsPath = getAppDefaultsFilePath();
+    try {
+        if (fs.existsSync(defaultsPath)) {
+            const content = fs.readFileSync(defaultsPath, 'utf-8');
+            return JSON.parse(content);
+        }
+    } catch (err) {
+        console.error('Error loading app defaults:', err);
+    }
+    return {};
+};
+
+// Save app defaults to userData
+const saveAppDefaults = (defaults: AppDefaults): void => {
+    const defaultsPath = getAppDefaultsFilePath();
+    try {
+        fs.writeFileSync(defaultsPath, JSON.stringify(defaults, null, 2), 'utf-8');
+    } catch (err) {
+        console.error('Error saving app defaults:', err);
+    }
 };
 
 const createWindow = () => {
@@ -174,16 +208,23 @@ app.on('activate', () => {
 ipcMain.handle('load-printers', async () => {
     try {
         const prefs = loadPreferences();
+        const appDefaults = loadAppDefaults();
         let configPath: string | null = null;
 
-        // Try user-configured path first
+        // Priority: user preferences > default network path > bundled
         if (prefs.printerConfigPath && fs.existsSync(prefs.printerConfigPath)) {
             configPath = prefs.printerConfigPath;
         } else {
-            // Fall back to bundled paths
-            configPath = path.join(__dirname, 'printers.json');
-            if (!fs.existsSync(configPath)) {
-                configPath = path.join(app.getAppPath(), 'printers.json');
+            // Try default network location
+            const defaultNetworkPath = 'P:\\dhl-configs\\printers.json';
+            if (fs.existsSync(defaultNetworkPath)) {
+                configPath = defaultNetworkPath;
+            } else {
+                // Fall back to bundled paths
+                configPath = path.join(__dirname, 'printers.json');
+                if (!fs.existsSync(configPath)) {
+                    configPath = path.join(app.getAppPath(), 'printers.json');
+                }
             }
         }
 
@@ -192,7 +233,7 @@ ipcMain.handle('load-printers', async () => {
             const config = JSON.parse(data);
             return {
                 printers: config.printers || [],
-                selectedPrinterName: config.selectedPrinterName || null,
+                selectedPrinterName: appDefaults.lastSelectedPrinterName || config.selectedPrinterName || null,
             };
         }
         return { printers: [], selectedPrinterName: null };
@@ -202,31 +243,47 @@ ipcMain.handle('load-printers', async () => {
     }
 });
 
-// IPC: Save selected printer to config file
+// IPC: Save selected printer to config and app defaults
 ipcMain.handle('save-selected-printer', async (_event, printerName: string) => {
     try {
         const prefs = loadPreferences();
         let configPath: string | null = null;
 
-        // Try user-configured path first
+        // Priority: user preferences > default network path > bundled
         if (prefs.printerConfigPath && fs.existsSync(prefs.printerConfigPath)) {
             configPath = prefs.printerConfigPath;
         } else {
-            // Fall back to bundled paths
-            configPath = path.join(__dirname, 'printers.json');
-            if (!fs.existsSync(configPath)) {
-                configPath = path.join(app.getAppPath(), 'printers.json');
+            // Try default network location
+            const defaultNetworkPath = 'P:\\dhl-configs\\printers.json';
+            if (fs.existsSync(defaultNetworkPath)) {
+                configPath = defaultNetworkPath;
+            } else {
+                // Fall back to bundled paths
+                configPath = path.join(__dirname, 'printers.json');
+                if (!fs.existsSync(configPath)) {
+                    configPath = path.join(app.getAppPath(), 'printers.json');
+                }
             }
         }
 
+        // Save to config file if writable
         if (configPath && fs.existsSync(configPath)) {
-            const data = fs.readFileSync(configPath, 'utf-8');
-            const config = JSON.parse(data);
-            config.selectedPrinterName = printerName;
-            fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'utf-8');
-            return { success: true };
+            try {
+                const data = fs.readFileSync(configPath, 'utf-8');
+                const config = JSON.parse(data);
+                config.selectedPrinterName = printerName;
+                fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'utf-8');
+            } catch (err) {
+                console.error('Could not save to config file, will save to local defaults:', err);
+            }
         }
-        return { success: false, message: 'Config file not found' };
+
+        // Always save to local app defaults
+        const defaults = loadAppDefaults();
+        defaults.lastSelectedPrinterName = printerName;
+        saveAppDefaults(defaults);
+
+        return { success: true };
     } catch (error) {
         console.error('Failed to save selected printer:', error);
         return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
@@ -294,18 +351,67 @@ ipcMain.handle('save-preferences', async (_event, prefs: AppPreferences) => {
     }
 });
 
-// IPC: Load label config (for preview positioning)
-ipcMain.handle('load-label-config', async () => {
+// IPC: Load app defaults (last selected printer/config)
+ipcMain.handle('load-app-defaults', async () => {
     try {
-        // Import dynamically to get fresh config
-        const { getLabelConfig } = await import('./utils/zplGenerator');
-        const config = getLabelConfig();
-        return { success: true, config };
+        const defaults = loadAppDefaults();
+        return { success: true, defaults };
+    } catch (error) {
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+});
+
+// IPC: Save app defaults (last selected printer/config)
+ipcMain.handle('save-app-defaults', async (_event, defaults: AppDefaults) => {
+    try {
+        saveAppDefaults(defaults);
+        return { success: true };
+    } catch (error) {
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+});
+
+// IPC: Load label config (for preview positioning)
+ipcMain.handle('load-label-config', async (event, configName?: string) => {
+    try {
+        const { loadLabelConfigByName, getAvailableConfigs } = await import('./utils/zplGenerator');
+
+        if (configName) {
+            // Load specific config by name
+            const config = loadLabelConfigByName(configName);
+            return { success: true, config, availableConfigs: getAvailableConfigs() };
+        } else {
+            // Load default config
+            const { getLabelConfig } = await import('./utils/zplGenerator');
+            const config = getLabelConfig();
+            return { success: true, config, availableConfigs: getAvailableConfigs() };
+        }
     } catch (error) {
         console.error('Error loading label config:', error);
         return {
             success: false,
             message: error instanceof Error ? error.message : 'Failed to load config',
+        };
+    }
+});
+
+// IPC: Get available label configurations
+ipcMain.handle('get-available-configs', async () => {
+    try {
+        const { getAvailableConfigs } = await import('./utils/zplGenerator');
+        const configs = getAvailableConfigs();
+        return { success: true, configs };
+    } catch (error) {
+        console.error('Error getting available configs:', error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Failed to get configs',
         };
     }
 });

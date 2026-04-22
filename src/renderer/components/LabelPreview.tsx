@@ -5,18 +5,21 @@ import './LabelPreview.css';
 interface LabelPreviewProps {
     assetTag: string;
     serialNumber?: string;
+    configName?: string;
     onPrint?: () => void;
     isLoading?: boolean;
     printButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
 interface LabelConfig {
+    name: string;
+    description?: string;
     labelDimensions: {
         width: number;
         height: number;
     };
     elements: {
-        serialNumber: {
+        serialNumber?: {
             enabled: boolean;
             position: { x: number; y: number };
             font: { height: number; width: number };
@@ -31,12 +34,21 @@ interface LabelConfig {
             position: { x: number; y: number };
             height: number;
         };
+        qrcode?: {
+            position: { x: number; y: number };
+            fieldBlock: { width: number; height: number };
+        };
+        assetTag?: {
+            position: { x: number; y: number };
+            font: { height: number; width: number };
+        };
     };
 }
 
 export const LabelPreview: React.FC<LabelPreviewProps> = ({
     assetTag,
     serialNumber,
+    configName,
     onPrint,
     isLoading = false,
     printButtonRef,
@@ -49,7 +61,7 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
     useEffect(() => {
         const loadConfig = async () => {
             try {
-                const result = await window.electron.label.loadConfig();
+                const result = await window.electron.label.loadConfig(configName);
                 if (result.success) {
                     setLabelConfig(result.config);
                 }
@@ -58,7 +70,7 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
             }
         };
         loadConfig();
-    }, []);
+    }, [configName]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -129,7 +141,12 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
     return (
         <div className="label-preview-container">
             <div className="preview-header">
-                <h3>Label Preview (1.5" × 0.5")</h3>
+                <div className="preview-title-section">
+                    <h3>Label Preview</h3>
+                    {labelConfig?.description && (
+                        <p className="preview-description">{labelConfig.description}</p>
+                    )}
+                </div>
                 <button
                     ref={printButtonRef}
                     onClick={onPrint}

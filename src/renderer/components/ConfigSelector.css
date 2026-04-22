@@ -1,0 +1,40 @@
+.config-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px 0;
+}
+
+.config-selector label {
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+}
+
+.config-select {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.config-select:hover {
+    border-color: #999;
+}
+
+.config-select:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+}
+
+.config-error {
+    color: #d32f2f;
+    font-size: 12px;
+    margin-top: 5px;
+}

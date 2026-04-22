@@ -14,50 +14,32 @@ export interface LabelData {
 }
 
 interface LabelConfig {
+    name: string;
+    description?: string;
     labelDimensions: {
         width: number;
         height: number;
+        description?: string;
     };
-    elements: {
-        serialNumber: {
-            enabled: boolean;
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
-            font: { family: string; height: number; width: number };
-            rotation: number;
-        };
-        heading: {
-            text: string;
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
-            font: { family: string; height: number; width: number };
-            rotation: number;
-        };
-        barcode: {
-            type: string;
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number };
-            height: number;
-            printHumanReadable: boolean;
-        };
-        assetTagLabel: {
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
-            font: { family: string; height: number; width: number };
-            rotation: number;
-        };
-    };
+    elements: Record<string, any>;
 }
 
-let cachedConfig: LabelConfig | null = null;
+interface LabelConfigFile {
+    configs: LabelConfig[];
+    defaultConfig: string;
+    notes?: string;
+}
+
+let cachedConfigFile: LabelConfigFile | null = null;
+let cachedSelectedConfig: LabelConfig | null = null;
+let selectedConfigName: string | null = null;
 
 /**
- * Load label configuration from label-config.json
+ * Load the entire label config file (contains array of configs)
  * Handles both development and packaged exe scenarios
- * Also checks user preferences for custom config path
  */
-function loadLabelConfig(): LabelConfig {
-    if (cachedConfig) return cachedConfig;
+function loadLabelConfigFile(): LabelConfigFile {
+    if (cachedConfigFile) return cachedConfigFile;
 
     const appPath = app.getAppPath();
     const resourcesPath = process.resourcesPath;
@@ -79,32 +61,59 @@ function loadLabelConfig(): LabelConfig {
     }
 
     // Try multiple paths to find label-config.json
+    // Priority: preferences > default network path > bundled defaults
+    const defaultNetworkPath = 'P:\\dhl-configs\\label-config.json';
     const paths = [
-        customConfigPath,                                     // User-configured path
-        path.join(appPath, 'label-config.json'),           // App root (packaged exe)
-        path.join(appPath, 'dist/label-config.json'),      // Development dist folder
+        customConfigPath,                                     // User-configured path (from preferences)
+        defaultNetworkPath,                                   // Default network location
+        path.join(appPath, 'label-config.json'),             // App root (packaged exe)
+        path.join(appPath, 'dist/label-config.json'),        // Development dist folder
         path.join(resourcesPath || '', 'label-config.json'), // electron-builder resources
         path.join(resourcesPath || '', 'dist/label-config.json'),
-    ].filter(p => p && p.length > 0); // Remove empty paths
+    ].filter(p => p && p.length > 0);
 
     for (const configPath of paths) {
         try {
             if (configPath && fs.existsSync(configPath)) {
                 const content = fs.readFileSync(configPath, 'utf-8');
-                cachedConfig = JSON.parse(content);
-                console.log(`✓ Loaded label config from: ${configPath}`);
-                return cachedConfig;
+                cachedConfigFile = JSON.parse(content);
+                console.log(`✓ Loaded label config file from: ${configPath}`);
+                return cachedConfigFile;
             }
         } catch (err) {
             console.error(`Could not load config from ${configPath}:`, err);
         }
     }
 
-    // If all paths fail, throw error with debug info
     console.error('Label config search paths:', paths);
-    console.error('app.getAppPath():', appPath);
-    console.error('process.resourcesPath:', resourcesPath);
     throw new Error(`label-config.json not found in any expected location`);
+}
+
+/**
+ * Get list of available label configurations
+ */
+export function getAvailableConfigs(): { name: string; description?: string }[] {
+    const configFile = loadLabelConfigFile();
+    return configFile.configs.map(cfg => ({
+        name: cfg.name,
+        description: cfg.description,
+    }));
+}
+
+/**
+ * Load a specific label configuration by name
+ */
+export function loadLabelConfigByName(configName: string): LabelConfig {
+    const configFile = loadLabelConfigFile();
+    const config = configFile.configs.find(cfg => cfg.name === configName);
+
+    if (!config) {
+        throw new Error(`Label config not found: ${configName}`);
+    }
+
+    selectedConfigName = configName;
+    cachedSelectedConfig = config;
+    return config;
 }
 
 /**
@@ -125,7 +134,16 @@ export function generateZPL(data: LabelData): string {
         throw new Error('Serial number must contain only numeric digits');
     }
 
-    const config = loadLabelConfig();
+    // Load the selected config, or default if none selected
+    let config: LabelConfig;
+    if (cachedSelectedConfig && selectedConfigName) {
+        config = cachedSelectedConfig;
+    } else {
+        const configFile = loadLabelConfigFile();
+        const defaultName = configFile.defaultConfig;
+        config = loadLabelConfigByName(defaultName);
+    }
+
     const { labelDimensions, elements } = config;
 
     let zpl = '^XA\n'; // Start format
@@ -185,7 +203,13 @@ function getRotationChar(rotation: number): string {
  * Get the current label configuration (used by preview and printing)
  */
 export function getLabelConfig(): LabelConfig {
-    return loadLabelConfig();
+    if (cachedSelectedConfig && selectedConfigName) {
+        return cachedSelectedConfig;
+    }
+    // Load default config
+    const configFile = loadLabelConfigFile();
+    const defaultName = configFile.defaultConfig;
+    return loadLabelConfigByName(defaultName);
 }
 
 /**

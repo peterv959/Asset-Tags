@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
+import { ConfigSelector } from './ConfigSelector';
 import './LabelForm.css';
+import './ConfigSelector.css';
 
 export interface FormData {
     assetTag: string;
@@ -8,11 +10,12 @@ export interface FormData {
 
 interface LabelFormProps {
     onBlur: (data: FormData) => void;
+    onConfigChange?: (configName: string) => void;
     isLoading?: boolean;
     assetTagRef?: React.Ref<HTMLInputElement>;
 }
 
-export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, isLoading = false, assetTagRef }) => {
+export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, onConfigChange, isLoading = false, assetTagRef }) => {
     const [assetTag, setAssetTag] = React.useState('');
     const [serialNumber, setSerialNumber] = React.useState('');
     const [assetTagError, setAssetTagError] = React.useState('');
@@ -57,6 +60,8 @@ export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, isLoading = false,
 
     return (
         <form className="label-form" onSubmit={(e) => e.preventDefault()}>
+            <ConfigSelector onConfigChange={onConfigChange || (() => { })} />
+
             <div className="form-group">
                 <label htmlFor="assetTag">Asset Tag *</label>
                 <input
