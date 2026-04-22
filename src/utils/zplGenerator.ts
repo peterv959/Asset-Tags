@@ -54,24 +54,42 @@ let cachedConfig: LabelConfig | null = null;
 /**
  * Load label configuration from label-config.json
  * Handles both development and packaged exe scenarios
+ * Also checks user preferences for custom config path
  */
 function loadLabelConfig(): LabelConfig {
     if (cachedConfig) return cachedConfig;
 
     const appPath = app.getAppPath();
     const resourcesPath = process.resourcesPath;
+    const userDataPath = app.getPath('userData');
+
+    // Try to load custom path from preferences
+    let customConfigPath: string | null = null;
+    try {
+        const prefsPath = path.join(userDataPath, 'preferences.json');
+        if (fs.existsSync(prefsPath)) {
+            const prefsData = fs.readFileSync(prefsPath, 'utf-8');
+            const prefs = JSON.parse(prefsData);
+            if (prefs.labelConfigPath && fs.existsSync(prefs.labelConfigPath)) {
+                customConfigPath = prefs.labelConfigPath;
+            }
+        }
+    } catch (err) {
+        console.error('Could not load preferences:', err);
+    }
 
     // Try multiple paths to find label-config.json
     const paths = [
+        customConfigPath,                                     // User-configured path
         path.join(appPath, 'label-config.json'),           // App root (packaged exe)
         path.join(appPath, 'dist/label-config.json'),      // Development dist folder
         path.join(resourcesPath || '', 'label-config.json'), // electron-builder resources
         path.join(resourcesPath || '', 'dist/label-config.json'),
-    ].filter(p => p.length > 0); // Remove empty paths
+    ].filter(p => p && p.length > 0); // Remove empty paths
 
     for (const configPath of paths) {
         try {
-            if (fs.existsSync(configPath)) {
+            if (configPath && fs.existsSync(configPath)) {
                 const content = fs.readFileSync(configPath, 'utf-8');
                 cachedConfig = JSON.parse(content);
                 console.log(`✓ Loaded label config from: ${configPath}`);
@@ -96,6 +114,17 @@ function loadLabelConfig(): LabelConfig {
  */
 export function generateZPL(data: LabelData): string {
     const { assetTag, serialNumber } = data;
+
+    // Validate that asset tag contains only numbers (Code 128C requirement)
+    if (!/^\d+$/.test(assetTag)) {
+        throw new Error('Asset tag must contain only numeric digits for Code 128C barcode');
+    }
+
+    // Validate serial number if provided (should also be numeric)
+    if (serialNumber && !/^\d*$/.test(serialNumber)) {
+        throw new Error('Serial number must contain only numeric digits');
+    }
+
     const config = loadLabelConfig();
     const { labelDimensions, elements } = config;
 
@@ -139,16 +168,6 @@ export function generateZPL(data: LabelData): string {
     zpl += `^${barcode.type},Y,${barcode.height},Y,${hrChar}\n`;
     zpl += `^FD${assetTag}^FS\n`;
 
-    // Asset tag label below barcode
-    const tagLabel = elements.assetTagLabel;
-    const tagRotChar = getRotationChar(tagLabel.rotation);
-    const tagFb = tagLabel.fieldBlock;
-
-    zpl += `^FO${tagLabel.position.x},${tagLabel.position.y}\n`;
-    zpl += `^FB${tagFb.width},${tagFb.height},${tagFb.maxLines},${tagFb.alignment},${tagFb.overflow}\n`;
-    zpl += `^${tagLabel.font.family}0${tagRotChar},${tagLabel.font.height},${tagLabel.font.width}\n`;
-    zpl += `^FD${assetTag}^FS\n`;
-
     zpl += '^XZ\n'; // End format
 
     return zpl;
@@ -160,6 +179,13 @@ export function generateZPL(data: LabelData): string {
 function getRotationChar(rotation: number): string {
     const chars = ['N', 'R', 'I', 'B']; // N=0°, R=90°, I=180°, B=270°
     return chars[rotation % 4] || 'N';
+}
+
+/**
+ * Get the current label configuration (used by preview and printing)
+ */
+export function getLabelConfig(): LabelConfig {
+    return loadLabelConfig();
 }
 
 /**

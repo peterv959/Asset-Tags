@@ -32,8 +32,8 @@
             "text": "Property of DHL",
             "position": {
                 "x": 100,
-                "y": 5,
-                "description": "x=100 (left edge of block), y=5 (near top)"
+                "y": 0,
+                "description": "x=100 (left edge of block), y=0 (at top)"
             },
             "fieldBlock": {
                 "width": 104,
@@ -55,8 +55,8 @@
             "typeDescription": "Code 128C barcode",
             "position": {
                 "x": 100,
-                "y": 24,
-                "description": "x=100 (left edge of block), y=24 (below heading)"
+                "y": 38,
+                "description": "x=100 (left edge of block), y=38 (below heading)"
             },
             "fieldBlock": {
                 "width": 104,
@@ -68,27 +68,6 @@
             "parameters": {
                 "description": "B1C format: ^B1C,Y,height,Y,Y = Code128C, yes, height, yes(print HR), yes(print check)"
             }
-        },
-        "assetTagLabel": {
-            "position": {
-                "x": 100,
-                "y": 78,
-                "description": "x=100 (left edge of block), y=78 (below barcode)"
-            },
-            "fieldBlock": {
-                "width": 104,
-                "height": 15,
-                "maxLines": 1,
-                "alignment": "C",
-                "overflow": 0,
-                "description": "width=104 dots (centered in 304-dot label), C=center align"
-            },
-            "font": {
-                "family": "A",
-                "height": 14,
-                "width": 12
-            },
-            "rotation": 0
         }
     },
     "notes": "All coordinates are in dots at 203 DPI. Adjust x/y to reposition elements. Change font height/width to adjust size. Edit this file and restart the app to see changes - no recompilation needed!"

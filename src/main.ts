@@ -10,7 +10,18 @@ interface Printer {
     port?: number;
 }
 
+interface AppPreferences {
+    printerConfigPath?: string;
+    labelConfigPath?: string;
+}
+
 let mainWindow: BrowserWindow | null = null;
+let preferencesWindow: BrowserWindow | null = null;
+
+// Get preferences file path (stored in userData, outside app bundle)
+const getPreferencesFilePath = (): string => {
+    return path.join(app.getPath('userData'), 'preferences.json');
+};
 
 const createWindow = () => {
     mainWindow = new BrowserWindow({
@@ -39,11 +50,74 @@ const createWindow = () => {
     });
 };
 
+// Load preferences from userData
+const loadPreferences = (): AppPreferences => {
+    try {
+        const prefsPath = getPreferencesFilePath();
+        if (fs.existsSync(prefsPath)) {
+            const data = fs.readFileSync(prefsPath, 'utf-8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error loading preferences:', error);
+    }
+    return {};
+};
+
+// Save preferences to userData
+const savePreferences = (prefs: AppPreferences): void => {
+    try {
+        const userDataPath = app.getPath('userData');
+        if (!fs.existsSync(userDataPath)) {
+            fs.mkdirSync(userDataPath, { recursive: true });
+        }
+        const prefsPath = getPreferencesFilePath();
+        fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 4), 'utf-8');
+    } catch (error) {
+        console.error('Error saving preferences:', error);
+    }
+};
+
+// Create preferences window
+const createPreferencesWindow = () => {
+    if (preferencesWindow) {
+        preferencesWindow.focus();
+        return;
+    }
+
+    preferencesWindow = new BrowserWindow({
+        width: 600,
+        height: 400,
+        parent: mainWindow || undefined,
+        modal: true,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+        },
+    });
+
+    const htmlPath = path.join(__dirname, 'public/index.html');
+    preferencesWindow.loadFile(htmlPath, { hash: 'preferences' });
+
+    preferencesWindow.on('closed', () => {
+        preferencesWindow = null;
+    });
+};
+
 // Create a minimal menu with Edit options for keyboard shortcuts
 const template: Electron.MenuItemConstructorOptions[] = [
     {
         label: 'Edit',
         submenu: [
+            {
+                label: 'Preferences',
+                accelerator: 'CmdOrCtrl+,',
+                click: () => {
+                    createPreferencesWindow();
+                },
+            },
+            { type: 'separator' },
             {
                 label: 'Undo',
                 accelerator: 'CmdOrCtrl+Z',
@@ -99,15 +173,21 @@ app.on('activate', () => {
 // IPC: Load printers from config file
 ipcMain.handle('load-printers', async () => {
     try {
-        // Try to load from the dist directory first (packaged app)
-        let configPath = path.join(__dirname, 'printers.json');
+        const prefs = loadPreferences();
+        let configPath: string | null = null;
 
-        // If not found, try the app root (development)
-        if (!fs.existsSync(configPath)) {
-            configPath = path.join(app.getAppPath(), 'printers.json');
+        // Try user-configured path first
+        if (prefs.printerConfigPath && fs.existsSync(prefs.printerConfigPath)) {
+            configPath = prefs.printerConfigPath;
+        } else {
+            // Fall back to bundled paths
+            configPath = path.join(__dirname, 'printers.json');
+            if (!fs.existsSync(configPath)) {
+                configPath = path.join(app.getAppPath(), 'printers.json');
+            }
         }
 
-        if (fs.existsSync(configPath)) {
+        if (configPath && fs.existsSync(configPath)) {
             const data = fs.readFileSync(configPath, 'utf-8');
             const config = JSON.parse(data);
             return {
@@ -125,13 +205,21 @@ ipcMain.handle('load-printers', async () => {
 // IPC: Save selected printer to config file
 ipcMain.handle('save-selected-printer', async (_event, printerName: string) => {
     try {
-        let configPath = path.join(__dirname, 'printers.json');
+        const prefs = loadPreferences();
+        let configPath: string | null = null;
 
-        if (!fs.existsSync(configPath)) {
-            configPath = path.join(app.getAppPath(), 'printers.json');
+        // Try user-configured path first
+        if (prefs.printerConfigPath && fs.existsSync(prefs.printerConfigPath)) {
+            configPath = prefs.printerConfigPath;
+        } else {
+            // Fall back to bundled paths
+            configPath = path.join(__dirname, 'printers.json');
+            if (!fs.existsSync(configPath)) {
+                configPath = path.join(app.getAppPath(), 'printers.json');
+            }
         }
 
-        if (fs.existsSync(configPath)) {
+        if (configPath && fs.existsSync(configPath)) {
             const data = fs.readFileSync(configPath, 'utf-8');
             const config = JSON.parse(data);
             config.selectedPrinterName = printerName;
@@ -184,6 +272,40 @@ ipcMain.handle('test-printer', async (_event, printerConfig: PrinterConfig) => {
         return {
             success: false,
             message: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+});
+
+// IPC: Load preferences
+ipcMain.handle('load-preferences', async () => {
+    return loadPreferences();
+});
+
+// IPC: Save preferences
+ipcMain.handle('save-preferences', async (_event, prefs: AppPreferences) => {
+    try {
+        savePreferences(prefs);
+        return { success: true };
+    } catch (error) {
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+});
+
+// IPC: Load label config (for preview positioning)
+ipcMain.handle('load-label-config', async () => {
+    try {
+        // Import dynamically to get fresh config
+        const { getLabelConfig } = await import('./utils/zplGenerator');
+        const config = getLabelConfig();
+        return { success: true, config };
+    } catch (error) {
+        console.error('Error loading label config:', error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Failed to load config',
         };
     }
 });

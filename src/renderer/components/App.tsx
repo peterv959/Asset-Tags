@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LabelForm, FormData } from './LabelForm';
 import { LabelPreview } from './LabelPreview';
+import { Preferences } from './Preferences';
 import './App.css';
 
 interface PreviewData {
@@ -32,9 +33,25 @@ export const App: React.FC = () => {
     const [isTesting, setIsTesting] = React.useState(false);
     const [error, setError] = React.useState<ErrorState>({ show: false, message: '' });
     const [testResult, setTestResult] = React.useState<TestResult>({ type: null, message: '' });
+    const [currentPage, setCurrentPage] = React.useState<'main' | 'preferences'>('main');
 
     const assetTagInputRef = React.useRef<HTMLInputElement>(null);
     const printButtonRef = React.useRef<HTMLButtonElement>(null);
+
+    // Handle hash-based routing for preferences
+    React.useEffect(() => {
+        const handleHashChange = () => {
+            if (window.location.hash === '#preferences') {
+                setCurrentPage('preferences');
+            } else {
+                setCurrentPage('main');
+            }
+        };
+
+        handleHashChange(); // Check initial hash
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
 
     // Load printers on mount
     React.useEffect(() => {
@@ -135,6 +152,15 @@ export const App: React.FC = () => {
     };
 
     const selectedPrinter = selectedPrinterId !== null ? printers[selectedPrinterId] : null;
+
+    // Render preferences page if requested
+    if (currentPage === 'preferences') {
+        return React.createElement(
+            'div',
+            { className: 'app' },
+            React.createElement(Preferences)
+        );
+    }
 
     return React.createElement(
         'div',

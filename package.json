@@ -27,7 +27,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "bwip-js": "^4.0.0",
     "jsbarcode": "^3.11.5",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
@@ -35,6 +34,7 @@
   "build": {
     "appId": "com.dhl.assettags",
     "productName": "DHL Asset Tags",
+    "asar": true,
     "files": [
       "dist/**/*",
       "node_modules/**/*"
