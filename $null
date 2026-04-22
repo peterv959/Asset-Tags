@@ -1,0 +1,8 @@
+Connecting to 185.46.212.32
+depth=2 C=US, O=Google Trust Services LLC, CN=GTS Root R4
+verify return:1
+depth=1 C=US, O=Google Trust Services, CN=WE1
+verify return:1
+depth=0 CN=npmjs.org
+verify return:1
+DONE

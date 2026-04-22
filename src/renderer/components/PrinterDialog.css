@@ -1,0 +1,256 @@
+.printer-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.printer-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  padding: 2rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.printer-dialog h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+}
+
+.form-group select {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+}
+
+.form-group select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  color: #666;
+}
+
+.status-message {
+  padding: 1rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.status-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.summary {
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.summary h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.summary p {
+  margin: 0.25rem 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-cancel {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-cancel {
+  background-color: #e9ecef;
+  color: #333;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #dee2e6;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.printer-info {
+  background-color: #f0f8ff;
+  border: 1px solid #bee5eb;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.printer-info p {
+  margin: 0.25rem 0;
+}
+
+.printer-info strong {
+  color: #0c5460;
+  font-size: 1rem;
+}
+
+.printer-info .printer-details {
+  color: #666;
+  font-size: 0.9rem;
+  font-family: monospace;
+}
+
+.printer-info.placeholder {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  color: #999;
+  text-align: center;
+}
+
+.printer-info.placeholder p {
+  color: #999;
+}
+
+.test-connection-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-test {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background-color: #007acc;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-test:hover:not(:disabled) {
+  background-color: #005a9e;
+}
+
+.btn-test:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.test-result {
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.test-result.status-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.test-result.status-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
