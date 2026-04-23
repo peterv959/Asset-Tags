@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: white;
+  background: #e8e8e8;
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -11,13 +11,28 @@
 .preview-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
+}
+
+.preview-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .preview-header h3 {
   margin: 0;
   color: #333;
+  font-size: 1.1rem;
+}
+
+.preview-description {
+  margin: 0;
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
+  max-width: 300px;
 }
 
 .btn-print-inline {
@@ -47,25 +62,22 @@
   position: relative;
   width: fit-content;
   margin: 0 auto;
+  transform: scale(0.65);
+  transform-origin: top center;
 }
 
 .label-canvas {
   border: 1px solid #ddd;
   background-color: white;
-  width: auto;
-  height: auto;
-  max-width: 100%;
+  width: 304px;
+  height: 102px;
   image-rendering: crisp-edges;
   display: block;
 }
 
 .label-barcode {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   width: auto;
-  height: 60px;
   pointer-events: none;
 }
 

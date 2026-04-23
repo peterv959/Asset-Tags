@@ -1,24 +1,76 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
 import './LabelPreview.css';
 
 interface LabelPreviewProps {
     assetTag: string;
     serialNumber?: string;
+    configName?: string;
     onPrint?: () => void;
     isLoading?: boolean;
     printButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
+interface LabelConfig {
+    name: string;
+    description?: string;
+    labelDimensions: {
+        width: number;
+        height: number;
+    };
+    elements: {
+        serialNumber?: {
+            enabled: boolean;
+            position: { x: number; y: number };
+            font: { height: number; width: number };
+        };
+        heading: {
+            text: string;
+            position: { x: number; y: number };
+            fieldBlock: { width: number; height: number };
+            font: { height: number; width: number };
+        };
+        barcode: {
+            position: { x: number; y: number };
+            height: number;
+        };
+        qrcode?: {
+            position: { x: number; y: number };
+            fieldBlock: { width: number; height: number };
+        };
+        assetTag?: {
+            position: { x: number; y: number };
+            font: { height: number; width: number };
+        };
+    };
+}
+
 export const LabelPreview: React.FC<LabelPreviewProps> = ({
     assetTag,
     serialNumber,
+    configName,
     onPrint,
     isLoading = false,
     printButtonRef,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const barcodeRef = useRef<SVGSVGElement>(null);
+    const [labelConfig, setLabelConfig] = useState<LabelConfig | null>(null);
+
+    // Load label config from backend
+    useEffect(() => {
+        const loadConfig = async () => {
+            try {
+                const result = await window.electron.label.loadConfig(configName);
+                if (result.success) {
+                    setLabelConfig(result.config);
+                }
+            } catch (error) {
+                console.error('Error loading label config:', error);
+            }
+        };
+        loadConfig();
+    }, [configName]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -36,44 +88,45 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
         ctx.lineWidth = 2;
         ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
 
-        const padding = 10;
-
         // Draw serial number rotated 90° on the left side (if present)
         if (serialNumber && serialNumber.trim()) {
             ctx.save();
-            ctx.translate(15, canvas.height / 2);
+            // Position from config, or default
+            const snX = labelConfig?.elements.serialNumber.position.x ?? 10;
+            const snY = labelConfig?.elements.serialNumber.position.y ?? 51;
+            ctx.translate(snX, snY);
             ctx.rotate(-Math.PI / 2);
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 18px Arial';
+            ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(serialNumber, 0, 0);
             ctx.restore();
         }
 
-        // Draw "Property of DHL" at top
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Property of DHL', canvas.width / 2, padding + 12);
-
-        // Draw human readable asset tag below barcode area (or placeholder)
-        ctx.fillStyle = '#000';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        const displayText = assetTag || '(No asset tag)';
-        ctx.fillText(displayText, canvas.width / 2, canvas.height - 5);
-    }, [assetTag, serialNumber]);
+        // Draw "Property of DHL" at top using config position
+        const heading = labelConfig?.elements.heading;
+        if (heading) {
+            const headingX = heading.position.x + (heading.fieldBlock.width / 2);
+            const headingY = heading.position.y + heading.font.height - 2;
+            ctx.fillStyle = '#000';
+            ctx.font = `bold ${heading.font.height}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(heading.text, headingX, headingY);
+        }
+    }, [assetTag, serialNumber, labelConfig]);
 
     // Generate barcode in SVG element
     useEffect(() => {
         if (barcodeRef.current && assetTag && assetTag.trim()) {
             try {
+                const barcodeHeight = labelConfig?.elements.barcode.height ?? 50;
                 JsBarcode(barcodeRef.current, assetTag, {
                     format: 'CODE128',
                     width: 2,
-                    height: 60,
-                    displayValue: false,
+                    height: barcodeHeight,
+                    displayValue: true,
                     margin: 0,
                 });
             } catch (error) {
@@ -83,12 +136,17 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
             // Clear barcode if no asset tag
             barcodeRef.current.innerHTML = '';
         }
-    }, [assetTag]);
+    }, [assetTag, labelConfig]);
 
     return (
         <div className="label-preview-container">
             <div className="preview-header">
-                <h3>Label Preview (1.5" × 0.5")</h3>
+                <div className="preview-title-section">
+                    <h3>Label Preview</h3>
+                    {labelConfig?.description && (
+                        <p className="preview-description">{labelConfig.description}</p>
+                    )}
+                </div>
                 <button
                     ref={printButtonRef}
                     onClick={onPrint}
@@ -108,6 +166,12 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
                 <svg
                     ref={barcodeRef}
                     className="label-barcode"
+                    style={{
+                        left: labelConfig ? `${labelConfig.elements.barcode.position.x + labelConfig.elements.barcode.fieldBlock.width / 2}px` : '152px',
+                        top: labelConfig ? `${labelConfig.elements.barcode.position.y}px` : '28px',
+                        height: labelConfig ? `${labelConfig.elements.barcode.height}px` : '50px',
+                        transform: 'translateX(-50%)',
+                    }}
                 />
             </div>
             <div className="preview-info">

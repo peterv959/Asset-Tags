@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
+import { ConfigSelector } from './ConfigSelector';
 import './LabelForm.css';
+import './ConfigSelector.css';
 
 export interface FormData {
     assetTag: string;
@@ -8,19 +10,48 @@ export interface FormData {
 
 interface LabelFormProps {
     onBlur: (data: FormData) => void;
+    onConfigChange?: (configName: string) => void;
     isLoading?: boolean;
     assetTagRef?: React.Ref<HTMLInputElement>;
 }
 
-export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, isLoading = false, assetTagRef }) => {
+export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, onConfigChange, isLoading = false, assetTagRef }) => {
     const [assetTag, setAssetTag] = React.useState('');
     const [serialNumber, setSerialNumber] = React.useState('');
+    const [assetTagError, setAssetTagError] = React.useState('');
+    const [serialNumberError, setSerialNumberError] = React.useState('');
     const serialNumberRef = useRef<HTMLInputElement>(null);
 
+    const handleAssetTagChange = (value: string) => {
+        // Only allow numeric characters
+        const numericOnly = value.replace(/[^0-9]/g, '');
+        setAssetTag(numericOnly);
+
+        if (value !== numericOnly && value.length > 0) {
+            setAssetTagError('Asset tag must contain only numbers');
+        } else {
+            setAssetTagError('');
+        }
+    };
+
+    const handleSerialNumberChange = (value: string) => {
+        // Only allow numeric characters and limit to 4
+        const numericOnly = value.replace(/[^0-9]/g, '').slice(0, 4);
+        setSerialNumber(numericOnly);
+
+        if (value !== numericOnly && value.length > 0) {
+            setSerialNumberError('Serial number must contain only numbers');
+        } else {
+            setSerialNumberError('');
+        }
+    };
+
     const handleAssetTagBlur = () => {
-        onBlur({ assetTag, serialNumber });
-        // Move focus to serial number
-        serialNumberRef.current?.focus();
+        if (assetTag) {
+            onBlur({ assetTag, serialNumber });
+            // Move focus to serial number
+            serialNumberRef.current?.focus();
+        }
     };
 
     const handleSerialNumberBlur = () => {
@@ -29,6 +60,8 @@ export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, isLoading = false,
 
     return (
         <form className="label-form" onSubmit={(e) => e.preventDefault()}>
+            <ConfigSelector onConfigChange={onConfigChange || (() => { })} />
+
             <div className="form-group">
                 <label htmlFor="assetTag">Asset Tag *</label>
                 <input
@@ -36,12 +69,13 @@ export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, isLoading = false,
                     id="assetTag"
                     type="text"
                     value={assetTag}
-                    onChange={(e) => setAssetTag(e.target.value)}
+                    onChange={(e) => handleAssetTagChange(e.target.value)}
                     onBlur={handleAssetTagBlur}
-                    placeholder="Enter asset tag number"
+                    placeholder="Enter asset tag number (numbers only)"
                     disabled={isLoading}
                     autoFocus
                 />
+                {assetTagError && <span className="error">{assetTagError}</span>}
             </div>
 
             <div className="form-group">
@@ -51,15 +85,12 @@ export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, isLoading = false,
                     id="serialNumber"
                     type="text"
                     value={serialNumber}
-                    onChange={(e) => {
-                        const val = e.target.value.slice(0, 4);
-                        setSerialNumber(val);
-                    }}
+                    onChange={(e) => handleSerialNumberChange(e.target.value)}
                     onBlur={handleSerialNumberBlur}
                     placeholder="Up to 4 digits"
                     disabled={isLoading}
-                    maxLength={4}
                 />
+                {serialNumberError && <span className="error">{serialNumberError}</span>}
             </div>
         </form>
     );

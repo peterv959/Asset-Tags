@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LabelForm, FormData } from './LabelForm';
 import { LabelPreview } from './LabelPreview';
+import { Preferences } from './Preferences';
 import './App.css';
 
 interface PreviewData {
@@ -32,9 +33,44 @@ export const App: React.FC = () => {
     const [isTesting, setIsTesting] = React.useState(false);
     const [error, setError] = React.useState<ErrorState>({ show: false, message: '' });
     const [testResult, setTestResult] = React.useState<TestResult>({ type: null, message: '' });
+    const [currentPage, setCurrentPage] = React.useState<'main' | 'preferences'>('main');
+    const [configName, setConfigName] = React.useState<string>('BAR Ring Scanner');
 
     const assetTagInputRef = React.useRef<HTMLInputElement>(null);
     const printButtonRef = React.useRef<HTMLButtonElement>(null);
+
+    // Handle hash-based routing for preferences
+    React.useEffect(() => {
+        const handleHashChange = () => {
+            if (window.location.hash === '#preferences') {
+                setCurrentPage('preferences');
+            } else {
+                setCurrentPage('main');
+            }
+        };
+
+        handleHashChange(); // Check initial hash
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    // Load app defaults on mount
+    React.useEffect(() => {
+        const loadDefaults = async () => {
+            try {
+                const result = await (window.electron as any).appDefaults.load();
+                if (result.success && result.defaults) {
+                    // Use saved defaults for initial state
+                    if (result.defaults.lastSelectedConfigName) {
+                        setConfigName(result.defaults.lastSelectedConfigName);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load app defaults:', err);
+            }
+        };
+        loadDefaults();
+    }, []);
 
     // Load printers on mount
     React.useEffect(() => {
@@ -43,7 +79,7 @@ export const App: React.FC = () => {
                 const result = await window.electron.label.loadPrinters();
                 setPrinters(result.printers);
 
-                // Find printer by name from config
+                // Find printer by name from config/defaults
                 if (result.printers.length > 0) {
                     if (result.selectedPrinterName) {
                         const index = result.printers.findIndex(
@@ -61,9 +97,44 @@ export const App: React.FC = () => {
         loadPrinters();
     }, []);
 
+    // Load available configs on mount and set default with fallback
+    React.useEffect(() => {
+        const loadAvailableConfigs = async () => {
+            try {
+                const result = await window.electron.label.getAvailableConfigs();
+                if (result.success && result.configs && result.configs.length > 0) {
+                    // Check if the hardcoded default exists, otherwise use first config
+                    const defaultConfigName = 'BAR Ring Scanner';
+                    const configExists = result.configs.some((c: any) => c.name === defaultConfigName);
+                    const selectedName = configExists ? defaultConfigName : result.configs[0].name;
+                    setConfigName(selectedName);
+                }
+            } catch (err) {
+                console.error('Failed to load available configs:', err);
+            }
+        };
+        loadAvailableConfigs();
+    }, []);
+
     const handleFormBlur = (data: FormData) => {
         setFormData(data);
         setTestResult({ type: null, message: '' }); // Clear test results when inputs change
+    };
+
+    const handleConfigChange = (newConfigName: string) => {
+        setConfigName(newConfigName);
+        // Save to app defaults
+        const saveConfig = async () => {
+            try {
+                const result = await (window.electron as any).appDefaults.load();
+                const defaults = result.defaults || {};
+                defaults.lastSelectedConfigName = newConfigName;
+                await (window.electron as any).appDefaults.save(defaults);
+            } catch (err) {
+                console.error('Failed to save config default:', err);
+            }
+        };
+        saveConfig();
     };
 
     // Save selected printer to config when it changes
@@ -136,6 +207,15 @@ export const App: React.FC = () => {
 
     const selectedPrinter = selectedPrinterId !== null ? printers[selectedPrinterId] : null;
 
+    // Render preferences page if requested
+    if (currentPage === 'preferences') {
+        return React.createElement(
+            'div',
+            { className: 'app' },
+            React.createElement(Preferences)
+        );
+    }
+
     return React.createElement(
         'div',
         { className: 'app' },
@@ -153,6 +233,7 @@ export const App: React.FC = () => {
                 { className: 'form-section' },
                 React.createElement(LabelForm, {
                     onBlur: handleFormBlur,
+                    onConfigChange: handleConfigChange,
                     isLoading,
                     assetTagRef: assetTagInputRef,
                 })
@@ -163,6 +244,7 @@ export const App: React.FC = () => {
                 React.createElement(LabelPreview, {
                     assetTag: formData.assetTag,
                     serialNumber: formData.serialNumber,
+                    configName,
                     onPrint: handlePrint,
                     isLoading,
                     printButtonRef,

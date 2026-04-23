@@ -14,79 +14,106 @@ export interface LabelData {
 }
 
 interface LabelConfig {
+    name: string;
+    description?: string;
     labelDimensions: {
         width: number;
         height: number;
+        description?: string;
     };
-    elements: {
-        serialNumber: {
-            enabled: boolean;
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
-            font: { family: string; height: number; width: number };
-            rotation: number;
-        };
-        heading: {
-            text: string;
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
-            font: { family: string; height: number; width: number };
-            rotation: number;
-        };
-        barcode: {
-            type: string;
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number };
-            height: number;
-            printHumanReadable: boolean;
-        };
-        assetTagLabel: {
-            position: { x: number; y: number };
-            fieldBlock: { width: number; height: number; maxLines: number; alignment: string; overflow: number };
-            font: { family: string; height: number; width: number };
-            rotation: number;
-        };
-    };
+    elements: Record<string, any>;
 }
 
-let cachedConfig: LabelConfig | null = null;
+interface LabelConfigFile {
+    configs: LabelConfig[];
+    defaultConfig: string;
+    notes?: string;
+}
+
+let cachedConfigFile: LabelConfigFile | null = null;
+let cachedSelectedConfig: LabelConfig | null = null;
+let selectedConfigName: string | null = null;
 
 /**
- * Load label configuration from label-config.json
+ * Load the entire label config file (contains array of configs)
  * Handles both development and packaged exe scenarios
  */
-function loadLabelConfig(): LabelConfig {
-    if (cachedConfig) return cachedConfig;
+function loadLabelConfigFile(): LabelConfigFile {
+    if (cachedConfigFile) return cachedConfigFile;
 
     const appPath = app.getAppPath();
     const resourcesPath = process.resourcesPath;
+    const userDataPath = app.getPath('userData');
+
+    // Try to load custom path from preferences
+    let customConfigPath: string | null = null;
+    try {
+        const prefsPath = path.join(userDataPath, 'preferences.json');
+        if (fs.existsSync(prefsPath)) {
+            const prefsData = fs.readFileSync(prefsPath, 'utf-8');
+            const prefs = JSON.parse(prefsData);
+            if (prefs.labelConfigPath && fs.existsSync(prefs.labelConfigPath)) {
+                customConfigPath = prefs.labelConfigPath;
+            }
+        }
+    } catch (err) {
+        console.error('Could not load preferences:', err);
+    }
 
     // Try multiple paths to find label-config.json
+    // Priority: preferences > default network path > bundled defaults
+    const defaultNetworkPath = 'P:\\dhl-configs\\label-config.json';
     const paths = [
-        path.join(appPath, 'label-config.json'),           // App root (packaged exe)
-        path.join(appPath, 'dist/label-config.json'),      // Development dist folder
+        customConfigPath,                                     // User-configured path (from preferences)
+        defaultNetworkPath,                                   // Default network location
+        path.join(appPath, 'label-config.json'),             // App root (packaged exe)
+        path.join(appPath, 'dist/label-config.json'),        // Development dist folder
         path.join(resourcesPath || '', 'label-config.json'), // electron-builder resources
         path.join(resourcesPath || '', 'dist/label-config.json'),
-    ].filter(p => p.length > 0); // Remove empty paths
+    ].filter(p => p && p.length > 0);
 
     for (const configPath of paths) {
         try {
-            if (fs.existsSync(configPath)) {
+            if (configPath && fs.existsSync(configPath)) {
                 const content = fs.readFileSync(configPath, 'utf-8');
-                cachedConfig = JSON.parse(content);
-                console.log(`✓ Loaded label config from: ${configPath}`);
-                return cachedConfig;
+                cachedConfigFile = JSON.parse(content);
+                console.log(`✓ Loaded label config file from: ${configPath}`);
+                return cachedConfigFile;
             }
         } catch (err) {
             console.error(`Could not load config from ${configPath}:`, err);
         }
     }
 
-    // If all paths fail, throw error with debug info
     console.error('Label config search paths:', paths);
-    console.error('app.getAppPath():', appPath);
-    console.error('process.resourcesPath:', resourcesPath);
     throw new Error(`label-config.json not found in any expected location`);
+}
+
+/**
+ * Get list of available label configurations
+ */
+export function getAvailableConfigs(): { name: string; description?: string }[] {
+    const configFile = loadLabelConfigFile();
+    return configFile.configs.map(cfg => ({
+        name: cfg.name,
+        description: cfg.description,
+    }));
+}
+
+/**
+ * Load a specific label configuration by name
+ */
+export function loadLabelConfigByName(configName: string): LabelConfig {
+    const configFile = loadLabelConfigFile();
+    const config = configFile.configs.find(cfg => cfg.name === configName);
+
+    if (!config) {
+        throw new Error(`Label config not found: ${configName}`);
+    }
+
+    selectedConfigName = configName;
+    cachedSelectedConfig = config;
+    return config;
 }
 
 /**
@@ -96,7 +123,27 @@ function loadLabelConfig(): LabelConfig {
  */
 export function generateZPL(data: LabelData): string {
     const { assetTag, serialNumber } = data;
-    const config = loadLabelConfig();
+
+    // Validate that asset tag contains only numbers (Code 128C requirement)
+    if (!/^\d+$/.test(assetTag)) {
+        throw new Error('Asset tag must contain only numeric digits for Code 128C barcode');
+    }
+
+    // Validate serial number if provided (should also be numeric)
+    if (serialNumber && !/^\d*$/.test(serialNumber)) {
+        throw new Error('Serial number must contain only numeric digits');
+    }
+
+    // Load the selected config, or default if none selected
+    let config: LabelConfig;
+    if (cachedSelectedConfig && selectedConfigName) {
+        config = cachedSelectedConfig;
+    } else {
+        const configFile = loadLabelConfigFile();
+        const defaultName = configFile.defaultConfig;
+        config = loadLabelConfigByName(defaultName);
+    }
+
     const { labelDimensions, elements } = config;
 
     let zpl = '^XA\n'; // Start format
@@ -139,16 +186,6 @@ export function generateZPL(data: LabelData): string {
     zpl += `^${barcode.type},Y,${barcode.height},Y,${hrChar}\n`;
     zpl += `^FD${assetTag}^FS\n`;
 
-    // Asset tag label below barcode
-    const tagLabel = elements.assetTagLabel;
-    const tagRotChar = getRotationChar(tagLabel.rotation);
-    const tagFb = tagLabel.fieldBlock;
-
-    zpl += `^FO${tagLabel.position.x},${tagLabel.position.y}\n`;
-    zpl += `^FB${tagFb.width},${tagFb.height},${tagFb.maxLines},${tagFb.alignment},${tagFb.overflow}\n`;
-    zpl += `^${tagLabel.font.family}0${tagRotChar},${tagLabel.font.height},${tagLabel.font.width}\n`;
-    zpl += `^FD${assetTag}^FS\n`;
-
     zpl += '^XZ\n'; // End format
 
     return zpl;
@@ -160,6 +197,19 @@ export function generateZPL(data: LabelData): string {
 function getRotationChar(rotation: number): string {
     const chars = ['N', 'R', 'I', 'B']; // N=0°, R=90°, I=180°, B=270°
     return chars[rotation % 4] || 'N';
+}
+
+/**
+ * Get the current label configuration (used by preview and printing)
+ */
+export function getLabelConfig(): LabelConfig {
+    if (cachedSelectedConfig && selectedConfigName) {
+        return cachedSelectedConfig;
+    }
+    // Load default config
+    const configFile = loadLabelConfigFile();
+    const defaultName = configFile.defaultConfig;
+    return loadLabelConfigByName(defaultName);
 }
 
 /**
