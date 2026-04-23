@@ -108,7 +108,7 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
         const heading = labelConfig?.elements.heading;
         if (heading) {
             const headingX = heading.position.x + (heading.fieldBlock.width / 2);
-            const headingY = heading.position.y + heading.font.height - 2;
+            const headingY = heading.position.y;
             ctx.fillStyle = '#000';
             ctx.font = `bold ${heading.font.height}px Arial`;
             ctx.textAlign = 'center';

@@ -84,8 +84,8 @@ async function build() {
         console.log('✓ HTML copied and updated');
 
         // Copy printers.json config
-        if (fs.existsSync('printers.json')) {
-            fs.copyFileSync('printers.json', 'dist/printers.json');
+        if (fs.existsSync('src/printers.json')) {
+            fs.copyFileSync('src/printers.json', 'dist/printers.json');
             console.log('✓ Printers config copied');
         }
 

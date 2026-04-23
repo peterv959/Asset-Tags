@@ -12,7 +12,7 @@
                 "serialNumber": {
                     "enabled": true,
                     "position": {
-                        "x": 10,
+                        "x": 20,
                         "y": 51,
                         "description": "x=10 (left side), y=51 (vertically centered)"
                     },
@@ -36,7 +36,7 @@
                     "text": "Property of DHL",
                     "position": {
                         "x": 100,
-                        "y": 0,
+                        "y": 10,
                         "description": "x=100 (left edge of block), y=0 (at top)"
                     },
                     "fieldBlock": {
@@ -59,15 +59,15 @@
                     "typeDescription": "Code 128C barcode",
                     "position": {
                         "x": 100,
-                        "y": 38,
+                        "y": 30,
                         "description": "x=100 (left edge of block), y=38 (below heading)"
                     },
                     "fieldBlock": {
                         "width": 104,
-                        "height": 50,
+                        "height": 60,
                         "description": "Field block for barcode centering (width=104 dots)"
                     },
-                    "height": 50,
+                    "height": 60,
                     "printHumanReadable": true,
                     "parameters": {
                         "description": "B1C format: ^B1C,Y,height,Y,Y = Code128C, yes, height, yes(print HR), yes(print check)"
