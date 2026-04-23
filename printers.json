@@ -3,12 +3,7 @@
     "printers": [
         {
             "name": "Main Printer",
-            "host": "192.168.1.100",
-            "port": 9100
-        },
-        {
-            "name": "Backup Printer",
-            "host": "192.168.1.101",
+            "host": "7.222.23.89",
             "port": 9100
         }
     ]
