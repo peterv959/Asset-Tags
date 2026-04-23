@@ -4,10 +4,11 @@
     "rootDir": "./src",
     "outDir": "./dist",
     // Environment Settings
-    "module": "commonjs",
-    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2024",
     "lib": [
-      "es2020",
+      "ES2024",
       "dom"
     ],
     "types": [

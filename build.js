@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
-const esbuild = require('esbuild');
-const path = require('path');
-const fs = require('fs');
+import esbuild from 'esbuild';
+import fs from 'fs';
 
 const isWatch = process.argv.includes('--watch');
 
 const mainConfig = {
     entryPoints: ['src/main.ts'],
-    outfile: 'dist/main.js',
+    outfile: 'dist/main.cjs',
     bundle: true,
     platform: 'node',
     target: 'es2020',
@@ -20,7 +19,7 @@ const mainConfig = {
 
 const preloadConfig = {
     entryPoints: ['src/preload.ts'],
-    outfile: 'dist/preload.js',
+    outfile: 'dist/preload.cjs',
     bundle: true,
     platform: 'node',
     target: 'es2020',

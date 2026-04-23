@@ -15,6 +15,16 @@ export interface Printer {
     port?: number;
 }
 
+export interface AppPreferences {
+    printerConfigPath?: string;
+    labelConfigPath?: string;
+}
+
+export interface AppDefaults {
+    lastSelectedConfigName?: string;
+    lastSelectedPrinterName?: string;
+}
+
 export interface ElectronAPI {
     ipcRenderer: {
         invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -29,6 +39,16 @@ export interface ElectronAPI {
         testPrinter: (printerConfig: PrinterConfig) => Promise<{ success: boolean; message: string }>;
         loadPrinters: () => Promise<{ printers: Printer[]; selectedPrinterName: string | null }>;
         saveSelectedPrinter: (printerName: string) => Promise<{ success: boolean; message?: string }>;
+        loadConfig: (configName?: string) => Promise<{ success: boolean; config?: unknown; availableConfigs?: unknown[]; message?: string }>;
+        getAvailableConfigs: () => Promise<{ success: boolean; configs?: Array<{ name: string }>; message?: string }>;
+    };
+    preferences: {
+        load: () => Promise<AppPreferences>;
+        save: (prefs: AppPreferences) => Promise<{ success: boolean; message?: string }>;
+    };
+    appDefaults: {
+        load: () => Promise<{ success: boolean; defaults?: AppDefaults; message?: string }>;
+        save: (defaults: AppDefaults) => Promise<{ success: boolean; message?: string }>;
     };
 }
 

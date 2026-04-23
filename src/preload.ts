@@ -17,6 +17,16 @@ export interface Printer {
     port?: number;
 }
 
+export interface AppPreferences {
+    printerConfigPath?: string;
+    labelConfigPath?: string;
+}
+
+export interface AppDefaults {
+    lastSelectedConfigName?: string;
+    lastSelectedPrinterName?: string;
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electron', {
@@ -41,5 +51,21 @@ contextBridge.exposeInMainWorld('electron', {
             ipcRenderer.invoke('load-printers'),
         saveSelectedPrinter: (printerName: string) =>
             ipcRenderer.invoke('save-selected-printer', printerName),
+        loadConfig: (configName?: string) =>
+            ipcRenderer.invoke('load-label-config', configName),
+        getAvailableConfigs: () =>
+            ipcRenderer.invoke('get-available-configs'),
+    },
+    preferences: {
+        load: () =>
+            ipcRenderer.invoke('load-preferences'),
+        save: (prefs: AppPreferences) =>
+            ipcRenderer.invoke('save-preferences', prefs),
+    },
+    appDefaults: {
+        load: () =>
+            ipcRenderer.invoke('load-app-defaults'),
+        save: (defaults: AppDefaults) =>
+            ipcRenderer.invoke('save-app-defaults', defaults),
     },
 });
