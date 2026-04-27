@@ -1,0 +1,63 @@
+{
+    "name": "@asset-tags/app",
+    "version": "0.0.1",
+    "description": "Electron application for Asset Tag Generation",
+    "main": "dist/main.cjs",
+    "homepage": "./",
+    "scripts": {
+        "build": "node ../../build.js",
+        "start": "electron dist/main.cjs",
+        "dev": "npm run build && electron dist/main.cjs",
+        "watch": "node ../../build.js --watch",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "pack": "electron-builder --dir",
+        "dist": "npm run build && set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder"
+    },
+    "type": "module",
+    "dependencies": {
+        "@asset-tags/shared": "^0.0.1",
+        "@asset-tags/ui": "^0.0.1",
+        "jsbarcode": "^3.11.5",
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.19.39",
+        "@types/react": "^18.0.0",
+        "@types/react-dom": "^18.0.0",
+        "typescript": "^5.0.0"
+    },
+    "build": {
+        "appId": "com.dhl.assettags",
+        "productName": "DHL Asset Tags",
+        "electronDist": "../../node_modules/electron/dist",
+        "files": [
+            "dist/**/*",
+            "../../node_modules/**/*"
+        ],
+        "directories": {
+            "buildResources": "../../assets"
+        },
+        "win": {
+            "icon": "../../assets/barcode.ico",
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                },
+                {
+                    "target": "portable",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ]
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true
+        }
+    }
+}

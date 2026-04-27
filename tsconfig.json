@@ -1,8 +1,5 @@
 {
   "compilerOptions": {
-    // File Layout
-    "rootDir": "./src",
-    "outDir": "./dist",
     // Environment Settings
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -31,13 +28,19 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
-  },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+    "resolveJsonModule": true,
+    // Workspace path mapping
+    "baseUrl": ".",
+    "paths": {
+      "@asset-tags/shared": [
+        "packages/shared/src"
+      ],
+      "@asset-tags/ui": [
+        "packages/ui/src"
+      ],
+      "@asset-tags/app": [
+        "packages/Asset-Tags/src"
+      ]
+    }
+  }
 }

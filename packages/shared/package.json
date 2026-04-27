@@ -1,0 +1,28 @@
+{
+    "name": "@asset-tags/shared",
+    "version": "0.0.1",
+    "description": "Shared utilities for Asset Tag Generation",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc",
+        "watch": "tsc --watch",
+        "clean": "rimraf dist",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "jsbarcode": "^3.11.5"
+    },
+    "devDependencies": {
+        "@types/node": "^20.19.39",
+        "typescript": "^5.0.0",
+        "rimraf": "^5.0.0"
+    }
+}

@@ -1,0 +1,156 @@
+{
+    "configs": [
+        {
+            "name": "BAR Ring Scanner",
+            "description": "1.5\" x 0.5\" label with Code 128C barcode",
+            "labelDimensions": {
+                "width": 304,
+                "height": 102,
+                "description": "Width and height in dots (203 DPI): 1.5\" x 0.5\""
+            },
+            "elements": {
+                "serialNumber": {
+                    "enabled": true,
+                    "position": {
+                        "x": 20,
+                        "y": 51,
+                        "description": "x=10 (left side), y=51 (vertically centered)"
+                    },
+                    "fieldBlock": {
+                        "width": 20,
+                        "height": 30,
+                        "maxLines": 1,
+                        "alignment": "C",
+                        "overflow": 0,
+                        "description": "width=20 dots, height=30 dots, C=center align, 0=no wrap"
+                    },
+                    "font": {
+                        "family": "A",
+                        "height": 30,
+                        "width": 22
+                    },
+                    "rotation": 2,
+                    "rotationDescription": "0=normal, 1=90°, 2=180°, 3=270°"
+                },
+                "heading": {
+                    "text": "Property of DHL",
+                    "position": {
+                        "x": 100,
+                        "y": 10,
+                        "description": "x=100 (left edge of block), y=0 (at top)"
+                    },
+                    "fieldBlock": {
+                        "width": 104,
+                        "height": 15,
+                        "maxLines": 1,
+                        "alignment": "C",
+                        "overflow": 0,
+                        "description": "width=104 dots (centered in 304-dot label), C=center align"
+                    },
+                    "font": {
+                        "family": "A",
+                        "height": 16,
+                        "width": 14
+                    },
+                    "rotation": 0
+                },
+                "barcode": {
+                    "type": "B1C",
+                    "typeDescription": "Code 128C barcode",
+                    "position": {
+                        "x": 100,
+                        "y": 30,
+                        "description": "x=100 (left edge of block), y=38 (below heading)"
+                    },
+                    "fieldBlock": {
+                        "width": 104,
+                        "height": 60,
+                        "description": "Field block for barcode centering (width=104 dots)"
+                    },
+                    "height": 60,
+                    "printHumanReadable": true,
+                    "parameters": {
+                        "description": "B1C format: ^B1C,Y,height,Y,Y = Code128C, yes, height, yes(print HR), yes(print check)"
+                    }
+                }
+            }
+        },
+        {
+            "name": "2x2 QR Code",
+            "description": "2\" x 2\" square label with Code 128C barcode (testing)",
+            "labelDimensions": {
+                "width": 304,
+                "height": 102,
+                "description": "Width and height in dots (203 DPI): 1.5\" x 0.5\""
+            },
+            "elements": {
+                "serialNumber": {
+                    "enabled": true,
+                    "position": {
+                        "x": 10,
+                        "y": 51,
+                        "description": "x=10 (left side), y=51 (vertically centered)"
+                    },
+                    "fieldBlock": {
+                        "width": 20,
+                        "height": 30,
+                        "maxLines": 1,
+                        "alignment": "C",
+                        "overflow": 0,
+                        "description": "width=20 dots, height=30 dots, C=center align, 0=no wrap"
+                    },
+                    "font": {
+                        "family": "A",
+                        "height": 30,
+                        "width": 22
+                    },
+                    "rotation": 2,
+                    "rotationDescription": "0=normal, 1=90°, 2=180°, 3=270°"
+                },
+                "heading": {
+                    "text": "Property of DHL",
+                    "position": {
+                        "x": 100,
+                        "y": 0,
+                        "description": "x=100 (left edge of block), y=0 (at top)"
+                    },
+                    "fieldBlock": {
+                        "width": 104,
+                        "height": 15,
+                        "maxLines": 1,
+                        "alignment": "C",
+                        "overflow": 0,
+                        "description": "width=104 dots (centered in 304-dot label), C=center align"
+                    },
+                    "font": {
+                        "family": "A",
+                        "height": 16,
+                        "width": 14
+                    },
+                    "rotation": 0
+                },
+                "barcode": {
+                    "type": "B1C",
+                    "typeDescription": "Code 128C barcode",
+                    "position": {
+                        "x": 100,
+                        "y": 38,
+                        "description": "x=100 (left edge of block), y=38 (below heading)"
+                    },
+                    "fieldBlock": {
+                        "width": 104,
+                        "height": 50,
+                        "description": "Field block for barcode centering (width=104 dots)"
+                    },
+                    "height": 50,
+                    "printHumanReadable": true,
+                    "parameters": {
+                        "description": "B1C format: ^B1C,Y,height,Y,Y = Code128C, yes, height, yes(print HR), yes(print check)"
+                    }
+                }
+            }
+        }
+    ],
+    "defaultConfig": "BAR Ringscanner",
+    "notes": "All coordinates are in dots at 203 DPI. Edit configs and restart app to see changes. Select config via dropdown in UI."
+}

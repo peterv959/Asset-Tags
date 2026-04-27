@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+        // File Layout
+        "rootDir": "./src",
+        "outDir": "./dist",
+        // Environment Settings
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "target": "es2024",
+        "lib": [
+            "ES2024",
+            "dom"
+        ],
+        "types": [
+            "node"
+        ],
+        // Other Outputs
+        "sourceMap": true,
+        "declaration": true,
+        "declarationMap": true,
+        // Stricter Typechecking Options
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        // Recommended Options
+        "strict": true,
+        "jsx": "react-jsx",
+        "jsxImportSource": "react",
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
+        "moduleDetection": "auto",
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

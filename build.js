@@ -5,9 +5,19 @@ import fs from 'fs';
 
 const isWatch = process.argv.includes('--watch');
 
+// Load .env.local if it exists
+let appMode = 'production';
+if (fs.existsSync('.env.local')) {
+    const envContent = fs.readFileSync('.env.local', 'utf-8');
+    const match = envContent.match(/VITE_APP_MODE\s*=\s*(.+)/);
+    if (match) {
+        appMode = match[1].trim();
+    }
+}
+
 const mainConfig = {
-    entryPoints: ['src/main.ts'],
-    outfile: 'dist/main.cjs',
+    entryPoints: ['packages/Asset-Tags/src/main.ts'],
+    outfile: 'packages/Asset-Tags/dist/main.cjs',
     bundle: true,
     platform: 'node',
     target: 'es2020',
@@ -15,11 +25,14 @@ const mainConfig = {
     sourcemap: true,
     minify: false,
     external: ['electron', 'net'],
+    define: {
+        'process.env.VITE_APP_MODE': `"${appMode}"`,
+    },
 };
 
 const preloadConfig = {
-    entryPoints: ['src/preload.ts'],
-    outfile: 'dist/preload.cjs',
+    entryPoints: ['packages/Asset-Tags/src/preload.ts'],
+    outfile: 'packages/Asset-Tags/dist/preload.cjs',
     bundle: true,
     platform: 'node',
     target: 'es2020',
@@ -27,11 +40,14 @@ const preloadConfig = {
     sourcemap: true,
     minify: false,
     external: ['electron'],
+    define: {
+        'process.env.VITE_APP_MODE': `"${appMode}"`,
+    },
 };
 
 const rendererConfig = {
-    entryPoints: ['src/renderer/index.tsx'],
-    outfile: 'dist/renderer/bundle.js',
+    entryPoints: ['packages/Asset-Tags/src/renderer/index.tsx'],
+    outfile: 'packages/Asset-Tags/dist/renderer/bundle.js',
     bundle: true,
     platform: 'browser',
     target: 'es2020',
@@ -43,6 +59,7 @@ const rendererConfig = {
     jsxFragment: 'React.Fragment',
     define: {
         'process.env.NODE_ENV': '"development"',
+        'process.env.VITE_APP_MODE': `"${appMode}"`,
     },
 };
 
@@ -51,8 +68,8 @@ async function build() {
         console.log('Building main process and renderer...');
 
         // Ensure dist directories exist
-        fs.mkdirSync('dist', { recursive: true });
-        fs.mkdirSync('dist/renderer', { recursive: true });
+        fs.mkdirSync('packages/Asset-Tags/dist', { recursive: true });
+        fs.mkdirSync('packages/Asset-Tags/dist/renderer', { recursive: true });
 
         // Build main process and preload
         await esbuild.build(mainConfig);
@@ -66,8 +83,8 @@ async function build() {
         console.log('✓ Renderer built');
 
         // Copy static files
-        if (!fs.existsSync('dist/public')) {
-            fs.mkdirSync('dist/public', { recursive: true });
+        if (!fs.existsSync('packages/Asset-Tags/dist/public')) {
+            fs.mkdirSync('packages/Asset-Tags/dist/public', { recursive: true });
         }
 
         const indexHtml = fs.readFileSync('public/index.html', 'utf-8');
@@ -80,18 +97,18 @@ async function build() {
                 'src="./renderer/bundle.js"',
                 'src="../renderer/bundle.js"'
             );
-        fs.writeFileSync('dist/public/index.html', updatedHtml);
+        fs.writeFileSync('packages/Asset-Tags/dist/public/index.html', updatedHtml);
         console.log('✓ HTML copied and updated');
 
         // Copy printers.json config
-        if (fs.existsSync('src/printers.json')) {
-            fs.copyFileSync('src/printers.json', 'dist/printers.json');
+        if (fs.existsSync('packages/Asset-Tags/src/printers.json')) {
+            fs.copyFileSync('packages/Asset-Tags/src/printers.json', 'packages/Asset-Tags/dist/printers.json');
             console.log('✓ Printers config copied');
         }
 
         // Copy label-config.json
-        if (fs.existsSync('src/label-config.json')) {
-            fs.copyFileSync('src/label-config.json', 'dist/label-config.json');
+        if (fs.existsSync('packages/Asset-Tags/src/label-config.json')) {
+            fs.copyFileSync('packages/Asset-Tags/src/label-config.json', 'packages/Asset-Tags/dist/label-config.json');
             console.log('✓ Label config copied');
         }
 

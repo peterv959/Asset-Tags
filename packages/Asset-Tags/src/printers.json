@@ -1,0 +1,10 @@
+{
+    "selectedPrinterName": "IT Office Printer",
+    "printers": [
+        {
+            "name": "IT Office Printer",
+            "host": "7.222.23.89",
+            "port": 9100
+        }
+    ]
+}

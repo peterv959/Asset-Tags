@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.cjs
+*.js
+*.d.ts
+*.js.map
+*.tsbuildinfo
+.env
+.env.local
+.DS_Store
+build/
