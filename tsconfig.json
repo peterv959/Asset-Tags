@@ -40,6 +40,9 @@
       ],
       "@asset-tags/app": [
         "packages/Asset-Tags/src"
+      ],
+      "@asset-tags/designer": [
+        "packages/label-designer/src"
       ]
     }
   }
