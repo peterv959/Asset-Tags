@@ -24,6 +24,20 @@ interface LabelConfig {
     elements: Record<string, any>;
 }
 
+interface FieldBlockConfig {
+    width: number;
+    maxLines?: number;
+    alignment?: 'L' | 'C' | 'R' | 'J';
+    lineSpacing?: number;
+    overflow?: number;
+}
+
+interface FontConfig {
+    family: string;
+    height: number;
+    width: number;
+}
+
 interface LabelConfigFile {
     configs: LabelConfig[];
     defaultConfig: string;
@@ -177,36 +191,53 @@ export function generateZPL(data: LabelData): string {
     if (elements.serialNumber.enabled && serialNumber && serialNumber.trim()) {
         const sn = elements.serialNumber;
         const rotChar = getRotationChar(sn.rotation);
-        const fb = sn.fieldBlock;
+        const fontCommand = getFontCommand(sn.font as FontConfig, rotChar);
+        const fb = sn.fieldBlock as FieldBlockConfig;
+        const serialMaxLines = fb.maxLines ?? 1;
+        const serialLineSpacing = fb.lineSpacing ?? 0;
+        const serialAlignment = fb.alignment ?? 'L';
+        const serialHangingIndent = fb.overflow ?? 0;
 
         zpl += `^FO${sn.position.x},${sn.position.y}\n`;
-        zpl += `^FB${fb.width},${fb.height},${fb.maxLines},${fb.alignment},${fb.overflow}\n`;
-        zpl += `^${sn.font.family}0${rotChar},${sn.font.height},${sn.font.width}\n`;
+        zpl += `^FB${fb.width},${serialMaxLines},${serialLineSpacing},${serialAlignment},${serialHangingIndent}\n`;
+        zpl += `${fontCommand}\n`;
         zpl += `^FD${serialNumber}^FS\n`;
     }
 
     // Heading
     const heading = elements.heading;
     const headingRotChar = getRotationChar(heading.rotation);
-    const headingFb = heading.fieldBlock;
+    const headingFontCommand = getFontCommand(heading.font as FontConfig, headingRotChar);
+    const headingFb = heading.fieldBlock as FieldBlockConfig;
+    const headingMaxLines = headingFb.maxLines ?? 1;
+    const headingLineSpacing = headingFb.lineSpacing ?? 0;
+    const headingAlignment = headingFb.alignment ?? 'C';
+    const headingHangingIndent = headingFb.overflow ?? 0;
 
     zpl += `^FO${heading.position.x},${heading.position.y}\n`;
-    zpl += `^FB${headingFb.width},${headingFb.height},${headingFb.maxLines},${headingFb.alignment},${headingFb.overflow}\n`;
-    zpl += `^${heading.font.family}0${headingRotChar},${heading.font.height},${heading.font.width}\n`;
+    zpl += `^FB${headingFb.width},${headingMaxLines},${headingLineSpacing},${headingAlignment},${headingHangingIndent}\n`;
+    zpl += `${headingFontCommand}\n`;
     zpl += `^FD${heading.text}^FS\n`;
 
-    // Barcode - Note: Field Block with barcode needs special handling
-    // Some printers support ^FB with barcodes, others don't - we'll position the barcode directly
+    // Barcode
     const barcode = elements.barcode;
-    const barcodeBlockWidth = barcode.fieldBlock.width;
-    // Center the barcode field origin: left edge + (block width / 2)
-    const barcodeCenterX = barcode.position.x + (barcodeBlockWidth / 2);
+    const barcodeFb = barcode.fieldBlock as FieldBlockConfig;
+    const barcodeAlignment = barcodeFb?.alignment;
+    const barcodeMaxLines = barcodeFb?.maxLines ?? 1;
+    const barcodeLineSpacing = barcodeFb?.lineSpacing ?? 0;
+    const barcodeHangingIndent = barcodeFb?.overflow ?? 0;
 
-    zpl += `^FO${Math.round(barcodeCenterX)},${barcode.position.y}\n`;
-    // For barcode, use TA (center align) since ^FB with barcodes may not work on all printers
-    zpl += '^TA\n';
+    // Use configured barcode block left edge as origin.
+    const barcodeOriginX = barcode.position.x;
+
+    zpl += `^FO${Math.round(barcodeOriginX)},${barcode.position.y}\n`;
+    // Allow config-driven centering/justification within block when provided.
+    if (barcodeFb?.width && barcodeAlignment) {
+        zpl += `^FB${barcodeFb.width},${barcodeMaxLines},${barcodeLineSpacing},${barcodeAlignment},${barcodeHangingIndent}\n`;
+    }
     const hrChar = barcode.printHumanReadable ? 'Y' : 'N';
-    zpl += `^${barcode.type},Y,${barcode.height},Y,${hrChar}\n`;
+    // Force Code 128 with interpretation line below barcode (printAbove = N)
+    zpl += `^BCN,${barcode.height},${hrChar},N,N\n`;
     // Format asset tag for proper Code 128 encoding (handles odd-digit numbers)
     const formattedAssetTag = formatAssetTagForBarcode(assetTag);
     zpl += `^FD${formattedAssetTag}^FS\n`;
@@ -219,9 +250,31 @@ export function generateZPL(data: LabelData): string {
 /**
  * Convert rotation angle (0, 1, 2, 3) to ZPL rotation character
  */
-function getRotationChar(rotation: number): string {
+function getRotationChar(rotation: number | string): string {
     const chars = ['N', 'R', 'I', 'B']; // N=0°, R=90°, I=180°, B=270°
-    return chars[rotation % 4] || 'N';
+    const parsed = typeof rotation === 'string' ? parseInt(rotation, 10) : rotation;
+
+    if (!Number.isFinite(parsed)) {
+        return 'N';
+    }
+
+    if (parsed >= 0 && parsed <= 3) {
+        return chars[parsed] || 'N';
+    }
+
+    if (parsed % 90 === 0) {
+        const normalized = ((((parsed / 90) % 4) + 4) % 4);
+        return chars[normalized] || 'N';
+    }
+
+    return 'N';
+}
+
+function getFontCommand(font: FontConfig, rotChar: string): string {
+    const family = (font?.family ?? 'A').toString().trim() || 'A';
+    const height = Number(font?.height ?? 16);
+    const width = Number(font?.width ?? 12);
+    return `^A${family}${rotChar},${height},${width}`;
 }
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import './PrinterSelectionDialog.css';
 
 interface Printer {
@@ -7,11 +7,17 @@ interface Printer {
     port?: number;
 }
 
+interface TestResult {
+    type: 'success' | 'error' | null;
+    message: string;
+}
+
 interface PrinterSelectionDialogProps {
     printers: Printer[];
     selectedPrinterId: number | null;
     isLoading: boolean;
     isTesting: boolean;
+    testResult: TestResult;
     onSelectPrinter: (index: number) => void;
     onTest: () => void;
     onClose: () => void;
@@ -22,15 +28,11 @@ export const PrinterSelectionDialog: React.FC<PrinterSelectionDialogProps> = ({
     selectedPrinterId,
     isLoading,
     isTesting,
+    testResult,
     onSelectPrinter,
     onTest,
     onClose,
 }) => {
-    const [testResult, setTestResult] = useState<{ type: 'success' | 'error' | null; message: string }>({
-        type: null,
-        message: '',
-    });
-
     return (
         <div className="printer-dialog-overlay" onClick={onClose}>
             <div className="printer-dialog-content" onClick={(e) => e.stopPropagation()}>

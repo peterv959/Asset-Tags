@@ -13,23 +13,23 @@
                     "enabled": true,
                     "position": {
                         "x": 20,
-                        "y": 51,
-                        "description": "x=10 (left side), y=51 (vertically centered)"
+                        "y": 47,
+                        "description": "x=20 (left side), y=47 (near bottom)"
                     },
                     "fieldBlock": {
-                        "width": 20,
+                        "width": 70,
                         "height": 30,
                         "maxLines": 1,
                         "alignment": "C",
                         "overflow": 0,
-                        "description": "width=20 dots, height=30 dots, C=center align, 0=no wrap"
+                        "description": "width=70 dots, single-line center aligned"
                     },
                     "font": {
                         "family": "A",
-                        "height": 30,
-                        "width": 22
+                        "height": 18,
+                        "width": 14
                     },
-                    "rotation": 2,
+                    "rotation": 1,
                     "rotationDescription": "0=normal, 1=90°, 2=180°, 3=270°"
                 },
                 "heading": {
@@ -37,7 +37,7 @@
                     "position": {
                         "x": 100,
                         "y": 10,
-                        "description": "x=100 (left edge of block), y=0 (at top)"
+                        "description": "x=100 (left edge of block), y=10 (at top)"
                     },
                     "fieldBlock": {
                         "width": 104,
@@ -60,7 +60,7 @@
                     "position": {
                         "x": 100,
                         "y": 30,
-                        "description": "x=100 (left edge of block), y=38 (below heading)"
+                        "description": "x=100 (left edge of block), y=30 (below heading)"
                     },
                     "fieldBlock": {
                         "width": 104,
@@ -87,24 +87,24 @@
                 "serialNumber": {
                     "enabled": true,
                     "position": {
-                        "x": 10,
-                        "y": 51,
-                        "description": "x=10 (left side), y=51 (vertically centered)"
+                        "x": 20,
+                        "y": 6,
+                        "description": "x=20 (left side), y=6 (near top)"
                     },
                     "fieldBlock": {
-                        "width": 20,
+                        "width": 70,
                         "height": 30,
                         "maxLines": 1,
-                        "alignment": "C",
+                        "alignment": "L",
                         "overflow": 0,
-                        "description": "width=20 dots, height=30 dots, C=center align, 0=no wrap"
+                        "description": "width=70 dots, single-line left aligned"
                     },
                     "font": {
                         "family": "A",
-                        "height": 30,
-                        "width": 22
+                        "height": 14,
+                        "width": 10
                     },
-                    "rotation": 2,
+                    "rotation": 0,
                     "rotationDescription": "0=normal, 1=90°, 2=180°, 3=270°"
                 },
                 "heading": {
@@ -151,6 +151,6 @@
             }
         }
     ],
-    "defaultConfig": "BAR Ringscanner",
+    "defaultConfig": "BAR Ring Scanner",
     "notes": "All coordinates are in dots at 203 DPI. Edit configs and restart app to see changes. Select config via dropdown in UI."
 }

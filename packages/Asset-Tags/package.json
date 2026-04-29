@@ -2,6 +2,7 @@
     "name": "@asset-tags/app",
     "version": "0.0.1",
     "description": "Electron application for Asset Tag Generation",
+    "author": "Peter R. Vermilye",
     "main": "dist/main.cjs",
     "homepage": "./",
     "scripts": {
@@ -17,6 +18,7 @@
     "dependencies": {
         "@asset-tags/shared": "^0.0.1",
         "@asset-tags/ui": "^0.0.1",
+        "dotenv": "^16.6.1",
         "jsbarcode": "^3.11.5",
         "react": "^18.0.0",
         "react-dom": "^18.0.0"
@@ -30,6 +32,7 @@
     "build": {
         "appId": "com.dhl.assettags",
         "productName": "DHL Asset Tags",
+        "electronVersion": "41.2.2",
         "electronDist": "../../node_modules/electron/dist",
         "files": [
             "dist/**/*",

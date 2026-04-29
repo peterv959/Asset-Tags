@@ -425,9 +425,16 @@ export const App: React.FC = () => {
                 selectedPrinterId,
                 isLoading,
                 isTesting,
-                onSelectPrinter: setSelectedPrinterId,
+                testResult,
+                onSelectPrinter: (index: number) => {
+                    setSelectedPrinterId(index);
+                    setTestResult({ type: null, message: '' });
+                },
                 onTest: handleTestConnection,
-                onClose: () => setShowPrinterDialog(false),
+                onClose: () => {
+                    setShowPrinterDialog(false);
+                    setTestResult({ type: null, message: '' });
+                },
             })
             : null
     );

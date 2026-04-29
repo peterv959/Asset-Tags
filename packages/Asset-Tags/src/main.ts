@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, MenuItem } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import dotenv from 'dotenv';
 import { generateZPL } from './utils/zplGenerator';
 import type { LabelData } from './utils/zplGenerator';
 import { sendToZebraPrinter, testPrinterConnection } from './utils/printerCommunication';
@@ -25,6 +26,33 @@ interface AppDefaults {
 
 let mainWindow: BrowserWindow | null = null;
 let preferencesWindow: BrowserWindow | null = null;
+
+const loadEnvLocal = (): void => {
+    const candidatePaths: string[] = [
+        path.resolve(process.cwd(), '.env.local'),
+        path.resolve(__dirname, '../.env.local'),
+        path.resolve(__dirname, '../../.env.local'),
+        path.resolve(__dirname, '../../../.env.local'),
+    ];
+
+    try {
+        candidatePaths.push(path.join(app.getAppPath(), '.env.local'));
+    } catch {
+        // Ignore app path resolution errors in early startup
+    }
+
+    const uniquePaths = [...new Set(candidatePaths)];
+
+    for (const envPath of uniquePaths) {
+        if (fs.existsSync(envPath)) {
+            dotenv.config({ path: envPath, override: false });
+            console.log(`[ENV] Loaded .env.local from: ${envPath}`);
+            return;
+        }
+    }
+};
+
+loadEnvLocal();
 
 // Get preferences file path (stored in userData, outside app bundle)
 const getPreferencesFilePath = (): string => {
@@ -57,6 +85,47 @@ const saveAppDefaults = (defaults: AppDefaults): void => {
         fs.writeFileSync(defaultsPath, JSON.stringify(defaults, null, 2), 'utf-8');
     } catch (err) {
         console.error('Error saving app defaults:', err);
+    }
+};
+
+const isZplDumpEnabled = (): boolean => {
+    const value = (process.env.ZPL_DUMP_ENABLED || '').trim().toLowerCase();
+    return value === '1' || value === 'true' || value === 'yes' || value === 'on';
+};
+
+const getZplDumpDir = (): string => {
+    const configuredPath = (process.env.ZPL_DUMP_DIR || '').trim();
+    if (configuredPath.length > 0) {
+        return configuredPath;
+    }
+    return path.join(app.getPath('userData'), 'zpl-dumps');
+};
+
+const sanitizeForFilename = (value: string): string => {
+    return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+};
+
+const dumpZplToFile = (zpl: string, labelData: LabelData, source: 'generate' | 'print'): void => {
+    if (!isZplDumpEnabled()) {
+        return;
+    }
+
+    try {
+        const dumpDir = getZplDumpDir();
+        fs.mkdirSync(dumpDir, { recursive: true });
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const assetTagPart = sanitizeForFilename(labelData.assetTag || 'unknown');
+        const serialPart = labelData.serialNumber
+            ? `_sn-${sanitizeForFilename(labelData.serialNumber)}`
+            : '';
+        const fileName = `${timestamp}_${source}_asset-${assetTagPart}${serialPart}.zpl`;
+        const filePath = path.join(dumpDir, fileName);
+
+        fs.writeFileSync(filePath, zpl, 'utf-8');
+        console.log(`[ZPL DUMP] Wrote ${filePath}`);
+    } catch (error) {
+        console.error('[ZPL DUMP] Failed to write ZPL file:', error);
     }
 };
 
@@ -470,6 +539,7 @@ ipcMain.handle('save-selected-printer', async (_event, printerName: string) => {
 ipcMain.handle('generate-zpl', async (_event, labelData: LabelData) => {
     try {
         const zpl = generateZPL(labelData);
+        dumpZplToFile(zpl, labelData, 'generate');
         return { success: true, zpl };
     } catch (error) {
         return {
@@ -485,6 +555,7 @@ ipcMain.handle(
     async (_event, labelData: LabelData, printerConfig: PrinterConfig) => {
         try {
             const zpl = generateZPL(labelData);
+            dumpZplToFile(zpl, labelData, 'print');
 
             // In demo mode, just return the ZPL for display
             if (isInDemoMode()) {
