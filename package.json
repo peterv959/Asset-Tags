@@ -23,14 +23,13 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "@types/node": "^20.19.39",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "electron": "^41.2.2",
     "electron-builder": "^26.8.1",
     "esbuild": "^0.28.0",
-    "typescript": "^5.0.0",
-    "rimraf": "^5.0.0"
+    "rimraf": "^5.0.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
     "jsbarcode": "^3.11.5",
