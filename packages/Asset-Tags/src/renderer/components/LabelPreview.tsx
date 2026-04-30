@@ -23,6 +23,7 @@ interface LabelConfig {
         serialNumber?: {
             enabled: boolean;
             position: { x: number; y: number };
+            fieldBlock: { width: number; height: number };
             font: { height: number; width: number };
         };
         heading: {
@@ -90,19 +91,26 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
         ctx.lineWidth = 2;
         ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
 
-        // Draw serial number rotated 90° on the left side (if present)
+        // Draw serial number with rotation B (bottom-to-top, ^A0B in ZPL).
+        // Use baseline anchor derived from field geometry and center text within FB width:
+        // baselineX = FO.x + fontHeight, baselineY = FO.y + FB.width
+        // drawX = FB.width / 2 keeps text centered between y=FO.y and y=FO.y+FB.width.
         if (serialNumber && serialNumber.trim()) {
             ctx.save();
-            // Position from config, or default
-            const snX = labelConfig?.elements.serialNumber.position.x ?? 10;
-            const snY = labelConfig?.elements.serialNumber.position.y ?? 51;
-            ctx.translate(snX, snY);
+            const serialElem = labelConfig?.elements.serialNumber;
+            const snX = serialElem?.position.x ?? 10;
+            const snY = serialElem?.position.y ?? 51;
+            const fontHeight = serialElem?.font.height ?? 12;
+            const fbWidth = serialElem?.fieldBlock.width ?? 70;
+            const baselineX = snX + fontHeight;
+            const baselineY = snY + fbWidth;
+            ctx.translate(baselineX, baselineY);
             ctx.rotate(-Math.PI / 2);
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 14px Arial';
+            ctx.font = `bold ${fontHeight}px Arial`;
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(serialNumber, 0, 0);
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText(serialNumber, fbWidth / 2, 0);
             ctx.restore();
         }
 

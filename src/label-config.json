@@ -13,44 +13,44 @@
                     "enabled": true,
                     "position": {
                         "x": 20,
-                        "y": 6,
-                        "description": "x=20 (left side), y=6 (near top)"
+                        "y": 17,
+                        "description": "x=20 (left side), y=17; rotation R text flows upward, field spans y=17..87"
                     },
                     "fieldBlock": {
                         "width": 70,
                         "height": 30,
                         "maxLines": 1,
-                        "alignment": "L",
+                        "alignment": "C",
                         "overflow": 0,
-                        "description": "width=70 dots, single-line left aligned"
+                        "description": "width=70 dots, single-line center aligned"
                     },
                     "font": {
                         "family": "A",
                         "height": 14,
-                        "width": 10
+                        "width": 0
                     },
-                    "rotation": 0,
-                    "rotationDescription": "0=normal, 1=90°, 2=180°, 3=270°"
+                    "rotation": 3,
+                    "rotationDescription": "0=normal, 1=90° clockwise, 2=180° clockwise, 3=270° clockwise"
                 },
                 "heading": {
                     "text": "Property of DHL",
                     "position": {
-                        "x": 100,
+                        "x": 20,
                         "y": 10,
-                        "description": "x=100 (left edge of block), y=0 (at top)"
+                        "description": "x=20 (clears serial column), y=10 (at top)"
                     },
                     "fieldBlock": {
-                        "width": 104,
+                        "width": 264,
                         "height": 15,
                         "maxLines": 1,
                         "alignment": "C",
                         "overflow": 0,
-                        "description": "width=104 dots (centered in 304-dot label), C=center align"
+                        "description": "width=264 dots (x=20..284), center at x=152      ≈ label center (rotated text)"
                     },
                     "font": {
                         "family": "A",
-                        "height": 16,
-                        "width": 14
+                        "height": 14,
+                        "width": 0
                     },
                     "rotation": 0
                 },
@@ -58,14 +58,14 @@
                     "type": "B1C",
                     "typeDescription": "Code 128C barcode",
                     "position": {
-                        "x": 100,
+                        "x": 20,
                         "y": 30,
-                        "description": "x=100 (left edge of block), y=38 (below heading)"
+                        "description": "x=20 (clears serial column), y=30 (below heading)"
                     },
                     "fieldBlock": {
-                        "width": 104,
+                        "width": 264,
                         "height": 60,
-                        "description": "Field block for barcode centering (width=104 dots)"
+                        "description": "Field block width = 264 (x=20..284) for centering barcode; height=60 (y=30..90) fits between heading and serial number"
                     },
                     "height": 60,
                     "printHumanReadable": true,
@@ -105,7 +105,7 @@
                         "width": 10
                     },
                     "rotation": 0,
-                    "rotationDescription": "0=normal, 1=90°, 2=180°, 3=270°"
+                    "rotationDescription": "0=normal, 1=90° clockwise, 2=180° clockwise, 3=270° clockwise"
                 },
                 "heading": {
                     "text": "Property of DHL",
@@ -151,6 +151,6 @@
             }
         }
     ],
-    "defaultConfig": "BAR Ringscanner",
+    "defaultConfig": "BAR Ring Scanner",
     "notes": "All coordinates are in dots at 203 DPI. Edit configs and restart app to see changes. Select config via dropdown in UI."
 }

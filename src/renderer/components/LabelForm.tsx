@@ -67,7 +67,7 @@ export const LabelForm: React.FC<LabelFormProps> = ({ onBlur, isLoading = false,
                     value={assetTag}
                     onChange={(e) => handleAssetTagChange(e.target.value)}
                     onBlur={handleAssetTagBlur}
-                    placeholder="Enter asset tag number (numbers only)"
+                    placeholder="Asset tag (numbers only)"
                     disabled={isLoading}
                     autoFocus
                 />

@@ -23,13 +23,14 @@ interface LabelConfig {
         serialNumber?: {
             enabled: boolean;
             position: { x: number; y: number };
-            font: { height: number; width: number };
+            fieldBlock: { width: number; height: number };
+            font: { family?: string; height: number; width: number; weight?: string };
         };
         heading: {
             text: string;
             position: { x: number; y: number };
             fieldBlock: { width: number; height: number };
-            font: { height: number; width: number };
+            font: { family?: string; height: number; width: number; weight?: string };
         };
         barcode: {
             position: { x: number; y: number };
@@ -41,9 +42,42 @@ interface LabelConfig {
         };
         assetTag?: {
             position: { x: number; y: number };
-            font: { height: number; width: number };
+            font: { family?: string; height: number; width: number; weight?: string };
         };
     };
+}
+
+function getCanvasFontFamily(zplFamily?: string): string {
+    const family = (zplFamily || 'A').toUpperCase();
+    const mapping: Record<string, string> = {
+        A: 'Arial, sans-serif',
+        B: 'Arial Black, Arial, sans-serif',
+        C: 'Courier New, monospace',
+        D: 'Times New Roman, serif',
+        E: 'Georgia, serif',
+        F: 'Verdana, sans-serif',
+        G: 'Tahoma, sans-serif',
+        H: 'Trebuchet MS, sans-serif',
+        I: 'Impact, sans-serif',
+        J: 'Calibri, Arial, sans-serif',
+        K: 'Cambria, serif',
+        L: 'Consolas, monospace',
+        M: 'Franklin Gothic Medium, Arial, sans-serif',
+        N: 'Segoe UI, Arial, sans-serif',
+        O: 'Lucida Sans Unicode, Arial, sans-serif',
+        P: 'Palatino Linotype, serif',
+    };
+    return mapping[family] || 'Arial, sans-serif';
+}
+
+function getCanvasFont(
+    font: { family?: string; height: number; weight?: string } | undefined,
+    fallbackHeight: number,
+): string {
+    const height = font?.height ?? fallbackHeight;
+    const weight = font?.weight || 'bold';
+    const family = getCanvasFontFamily(font?.family);
+    return `${weight} ${height}px ${family}`;
 }
 
 export const LabelPreview: React.FC<LabelPreviewProps> = ({
@@ -90,18 +124,25 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
         ctx.lineWidth = 2;
         ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
 
-        // Draw serial number rotated 90° on the left side (if present)
+        // Draw serial number with rotation B (bottom-to-top, ^A0B in ZPL).
+        // Model this from a text-baseline anchor to match printer behavior:
+        // baselineX = FO.x + fontHeight, baselineY = FO.y + FB.width
         if (serialNumber && serialNumber.trim()) {
             ctx.save();
-            // Position from config, or default
-            const snX = labelConfig?.elements.serialNumber.position.x ?? 10;
-            const snY = labelConfig?.elements.serialNumber.position.y ?? 51;
-            ctx.translate(snX, snY);
+            const serialElem = labelConfig?.elements.serialNumber;
+            const snX = serialElem?.position.x ?? 10;
+            const snY = serialElem?.position.y ?? 51;
+            const fbWidth = serialElem?.fieldBlock.width ?? 70;
+            const fontHeight = serialElem?.font.height ?? 12;
+            const baselineX = snX + fontHeight;
+            const baselineY = snY + fbWidth;
+
+            ctx.translate(baselineX, baselineY);
             ctx.rotate(-Math.PI / 2);
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.font = getCanvasFont(serialElem?.font, 12);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
             ctx.fillText(serialNumber, 0, 0);
             ctx.restore();
         }
@@ -112,7 +153,7 @@ export const LabelPreview: React.FC<LabelPreviewProps> = ({
             const headingX = heading.position.x + (heading.fieldBlock.width / 2);
             const headingY = heading.position.y;
             ctx.fillStyle = '#000';
-            ctx.font = `bold ${heading.font.height}px Arial`;
+            ctx.font = getCanvasFont(heading.font, 12);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(heading.text, headingX, headingY);

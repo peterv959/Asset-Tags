@@ -132,24 +132,25 @@ export function loadLabelConfigByName(configName: string): LabelConfig {
 
 /**
  * Format asset tag for Code 128 barcode encoding
- * Code 128C encodes digit pairs. For odd-digit numbers:
- * - Encode first digit with Code 128A
- * - Switch to Code 128C for remaining pairs
+ * Explicitly invoke Code 128C with >; so the printer does not default to Code 128B.
+ * Code 128C encodes digit pairs. For odd-digit numbers, switch to Code 128B
+ * for the final digit.
  *
- * Example: 12345 → {A1{C2345
- * This encodes as: 1 (Code A), then 23 and 45 (Code C)
+ * Examples:
+ * - 1234  → >;1234
+ * - 12345 → >;1234>65
  */
 export function formatAssetTagForBarcode(assetTag: string): string {
     const digits = assetTag.replace(/\D/g, ''); // Remove non-digits
 
     if (digits.length % 2 === 0) {
         // Even number of digits - all Code 128C
-        return digits;
+        return `>;${digits}`;
     } else {
-        // Odd number of digits - Code 128A for first digit, then Code 128C for pairs
-        const firstDigit = digits[0];
-        const remainingPairs = digits.substring(1);
-        return `{A${firstDigit}{C${remainingPairs}`;
+        // Odd number of digits - encode pairs in C, then switch to B (>6) for the last digit
+        const pairDigits = digits.substring(0, digits.length - 1);
+        const lastDigit = digits[digits.length - 1];
+        return `>;${pairDigits}>6${lastDigit}`;
     }
 }
 
@@ -221,30 +222,76 @@ export function generateZPL(data: LabelData): string {
 
     // Barcode
     const barcode = elements.barcode;
-    const barcodeFb = barcode.fieldBlock as FieldBlockConfig;
-    const barcodeAlignment = barcodeFb?.alignment;
-    const barcodeMaxLines = barcodeFb?.maxLines ?? 1;
-    const barcodeLineSpacing = barcodeFb?.lineSpacing ?? 0;
-    const barcodeHangingIndent = barcodeFb?.overflow ?? 0;
 
-    // Use configured barcode block left edge as origin.
-    const barcodeOriginX = barcode.position.x;
+    // Format asset tag for proper Code 128 encoding (handles odd-digit numbers)
+    const formattedAssetTag = formatAssetTagForBarcode(assetTag);
 
-    zpl += `^FO${Math.round(barcodeOriginX)},${barcode.position.y}\n`;
-    // Allow config-driven centering/justification within block when provided.
-    if (barcodeFb?.width && barcodeAlignment) {
-        zpl += `^FB${barcodeFb.width},${barcodeMaxLines},${barcodeLineSpacing},${barcodeAlignment},${barcodeHangingIndent}\n`;
-    }
+    // Center the barcode within the configured field block.
+    // ^BC has no built-in centering command, so we compute the left origin manually.
+    const moduleWidth: number = barcode.moduleWidth ?? 2;
+    const barcodePixelWidth = computeCode128Width(formattedAssetTag, moduleWidth);
+    const barcodeBlockWidth = barcode.fieldBlock?.width ?? (labelDimensions.width - barcode.position.x);
+    const barcodeOriginX = barcode.position.x + Math.max(0, Math.round((barcodeBlockWidth - barcodePixelWidth) / 2));
+
+    zpl += `^FO${barcodeOriginX},${barcode.position.y}\n`;
     const hrChar = barcode.printHumanReadable ? 'Y' : 'N';
     // Force Code 128 with interpretation line below barcode (printAbove = N)
     zpl += `^BCN,${barcode.height},${hrChar},N,N\n`;
-    // Format asset tag for proper Code 128 encoding (handles odd-digit numbers)
-    const formattedAssetTag = formatAssetTagForBarcode(assetTag);
     zpl += `^FD${formattedAssetTag}^FS\n`;
 
     zpl += '^XZ\n'; // End format
 
     return zpl;
+}
+
+/**
+ * Compute the printed width of a Code 128 barcode in dots.
+ *
+ * Code 128 structure: start(11 modules) + data symbols(11 each) + check(11) + stop(13).
+ * ZPL ^BC uses a default narrow-bar (module) width of 2 dots.
+ * ZPL invocation/prefixes: >; = invoke subset C, >6 = switch to subset B,
+ * {A/{B/{C = subset switches.
+ * A leading prefix sets the start-code mode (no extra symbol); subsequent prefixes are
+ * code-change symbols (each consumes one 11-module symbol).
+ */
+export function computeCode128Width(formattedData: string, moduleWidth: number = 2): number {
+    let symbolCount = 2; // start + check (stop handled separately below)
+    let currentMode: 'A' | 'B' | 'C' = 'C';
+    let i = 0;
+
+    // Leading prefixes set the start-code mode — no extra switch symbol
+    if (formattedData.length >= 2 && formattedData[0] === '{') {
+        currentMode = formattedData[1] as 'A' | 'B' | 'C';
+        i = 2;
+    } else if (formattedData.length >= 2 && formattedData[0] === '>' && formattedData[1] === ';') {
+        currentMode = 'C';
+        i = 2;
+    }
+
+    while (i < formattedData.length) {
+        if (formattedData[i] === '{' && i + 1 < formattedData.length) {
+            // Mid-stream mode switch: one Code 128 code-change symbol
+            currentMode = formattedData[i + 1] as 'A' | 'B' | 'C';
+            symbolCount += 1;
+            i += 2;
+        } else if (formattedData[i] === '>' && i + 1 < formattedData.length && formattedData[i + 1] === '6') {
+            // Mid-stream mode switch to B via invocation code (>6)
+            currentMode = 'B';
+            symbolCount += 1;
+            i += 2;
+        } else if (currentMode === 'C') {
+            // Code 128C: two digits encode as a single symbol
+            symbolCount += 1;
+            i += 2;
+        } else {
+            // Code 128A / B: one character per symbol
+            symbolCount += 1;
+            i += 1;
+        }
+    }
+
+    // Each symbol = 11 modules; stop bar = 13 modules
+    return (symbolCount * 11 + 13) * moduleWidth;
 }
 
 /**
